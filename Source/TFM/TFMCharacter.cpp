@@ -104,13 +104,13 @@ void ATFMCharacter::Move(const FInputActionValue& Value)
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 
 		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 	
 		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 
 		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(ForwardDirection, -MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
