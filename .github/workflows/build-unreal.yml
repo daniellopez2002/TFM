@@ -20,14 +20,14 @@ jobs:
       ARCHIVE_DIR: "C:\\actions-runner\\_work\\TFM\\Build"
 
     steps:
-      # 1️⃣ Clona el repositorio completo (incluyendo LFS)
+      # 1️⃣ Checkout completo con soporte LFS
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
 
-      # 2️⃣ Muestra información del entorno y secretos (sin revelar valores)
+      # 2️⃣ Verifica entorno
       - name: Verify environment
         shell: powershell
         run: |
@@ -40,36 +40,54 @@ jobs:
           Write-Host "Build Platform: $env:BUILD_PLATFORM"
           Write-Host "Build Config: $env:BUILD_CONFIG"
 
-      # 3️⃣ Ejecuta el build con Unreal Automation Tool (UAT)
+      # 3️⃣ Ejecuta el BuildCookRun con manejo de errores robusto
       - name: Build, Cook, and Package (UAT)
         shell: powershell
         run: |
-          $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
+          $uePath = $env:UE_PATH.Trim('"').Trim()
+          $uat = Join-Path $uePath "Engine\Build\BatchFiles\RunUAT.bat"
+          $logDir = $env:ARCHIVE_DIR
+          $logFile = Join-Path $logDir "BuildLog.txt"
+
+          if (!(Test-Path $logDir)) {
+              Write-Host "📁 Creating output directory: $logDir"
+              New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+          }
+
           if (!(Test-Path $uat)) {
-            Write-Error "❌ RunUAT.bat not found at $uat"
-            exit 1
+              Write-Error "❌ RunUAT.bat not found at $uat"
+              exit 1
           }
 
           Write-Host "🚀 Starting BuildCookRun..."
           Write-Host "Project: $env:PROJECT_PATH"
-          Write-Host "Output: $env:ARCHIVE_DIR"
+          Write-Host "Output: $logDir"
 
-          # Inicia el build
-          & "$uat" BuildCookRun `
-            -project="$env:PROJECT_PATH" `
-            -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
-            -build -cook -stage -pak -archive `
-            -archivedirectory="$env:ARCHIVE_DIR" `
-            -utf8output `
-            -CrashReporter `
-            -nocompileeditor `
-            -NoDebugInfo | Tee-Object -FilePath "$env:ARCHIVE_DIR\BuildLog.txt"
+          $args = @(
+            "BuildCookRun",
+            "-project=$env:PROJECT_PATH",
+            "-noP4",
+            "-platform=$env:BUILD_PLATFORM",
+            "-clientconfig=$env:BUILD_CONFIG",
+            "-build",
+            "-cook",
+            "-stage",
+            "-pak",
+            "-archive",
+            "-archivedirectory=$env:ARCHIVE_DIR",
+            "-utf8output",
+            "-CrashReporter",
+            "-nocompileeditor",
+            "-NoDebugInfo"
+          )
+
+          & "$uat" @args 2>&1 | Tee-Object -FilePath $logFile
 
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
-            exit $LASTEXITCODE
+              Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
+              exit $LASTEXITCODE
           } else {
-            Write-Host "✅ BuildCookRun completed successfully."
+              Write-Host "✅ BuildCookRun completed successfully."
           }
 
       # 4️⃣ Comprime el build completo
