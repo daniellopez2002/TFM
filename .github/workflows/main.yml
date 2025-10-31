@@ -5,7 +5,7 @@ on:
 
 jobs:
   check:
-    runs-on: [self-hosted, Windows, X64, label-1]
+    runs-on: [self-hosted, Windows, X64, Local-1]
     steps:
       - name: Say Hello
         run: echo "Runner is working on $env:COMPUTERNAME with user $env:USERNAME"
