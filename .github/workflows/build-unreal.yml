@@ -41,7 +41,7 @@ jobs:
 
       # 3️⃣ Muestra información del entorno y secretos (sin revelar valores)
       - name: Verify environment
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "Runner: $env:COMPUTERNAME"
           if ($env:UE_PATH -and $env:PROJECT_PATH) {
@@ -54,7 +54,7 @@ jobs:
 
       # 4️⃣ Ejecuta el build con Unreal Automation Tool (UAT)
       - name: Build, Cook, and Package (Incremental UAT)
-        shell: pwsh
+        shell: powershell
         run: |
           $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
           if (!(Test-Path $uat)) {
@@ -84,7 +84,7 @@ jobs:
 
       # 5️⃣ Comprime el build final jugable
       - name: Compress build
-        shell: pwsh
+        shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
           $buildDir = "C:\\actions-runner\\_work\\TFM\\Build\\WindowsNoEditor"
