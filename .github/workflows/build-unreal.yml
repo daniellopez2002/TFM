@@ -99,7 +99,7 @@ jobs:
         shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $buildDir = "C:\actions-runner\_work\TFM\TFM\Build\Windows"
+          $buildDir = "C:\actions-runner\_work\TFM\Build\Windows"
           $zipPath = "C:\actions-runner\_work\TFM\TFM\Build\TFM_GameBuild_${{ github.run_number }}_${timestamp}_${env:BUILD_PLATFORM}_${env:BUILD_CONFIG}.zip"
 
           Write-Host "[Compressing] Build from: $buildDir"
