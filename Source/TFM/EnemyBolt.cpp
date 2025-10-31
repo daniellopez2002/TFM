@@ -1,19 +1,17 @@
-#include "EnemyBolt.h"
+﻿#include "EnemyBolt.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/StaticMeshComponent.h"
 
-// Sets default values
 AEnemyBolt::AEnemyBolt()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // Create mesh
     MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
     RootComponent = MeshComp;
+
     SphereComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SphereComp"));
     SphereComp->SetupAttachment(MeshComp);
-
 }
 
 void AEnemyBolt::BeginPlay()
@@ -34,9 +32,8 @@ void AEnemyBolt::BeginPlay()
         SphereComp->SetMaterial(0, DynamicMaterial);
     }
 
-
-    if (DynamicMaterial)
-        MeshComp->SetMaterial(0, DynamicMaterial);
+    // Estado inicial color amarillo
+    UpdateColor(FLinearColor::Yellow);
 }
 
 void AEnemyBolt::Tick(float DeltaTime)
@@ -48,18 +45,26 @@ void AEnemyBolt::Tick(float DeltaTime)
     case EEnemyState::Patrol:
         Patrol(DeltaTime);
         break;
+
     case EEnemyState::Charge:
         Charge(DeltaTime);
+
+        // Parpadeo rojo blanco
+        if (DynamicMaterial)
+        {
+            float Pulse = (FMath::Sin(GetWorld()->GetTimeSeconds() * 8.0f) + 1.0f) * 0.5f;
+            FLinearColor BlinkColor = FLinearColor::LerpUsingHSV(FLinearColor::White, FLinearColor::Red, Pulse);
+            UpdateColor(BlinkColor);
+        }
         break;
+
     case EEnemyState::Attack:
         Attack(DeltaTime);
         break;
     }
 
-    // Draw detection radius
     DrawDebugSphere(GetWorld(), GetActorLocation(), DetectionRadius, 16, FColor::Yellow);
 
-    // Check if player is in range
     if (PlayerPawn)
     {
         float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
@@ -94,14 +99,6 @@ void AEnemyBolt::Charge(float DeltaTime)
 {
     ChargeTimer += DeltaTime;
 
-    // Gradually change color to red
-    if (DynamicMaterial)
-    {
-        float Progress = FMath::Clamp(ChargeTimer / ChargeTime, 0.0f, 1.0f);
-        FLinearColor CurrentColor = FLinearColor::LerpUsingHSV(FLinearColor::White, FLinearColor::Red, Progress);
-        UpdateColor(CurrentColor);
-    }
-
     if (ChargeTimer >= ChargeTime)
     {
         ChargeTimer = 0.0f;
@@ -116,21 +113,19 @@ void AEnemyBolt::Charge(float DeltaTime)
 void AEnemyBolt::Attack(float DeltaTime)
 {
     DashTimer += DeltaTime;
-
     float Progress = DashTimer / DashDuration;
+
     if (Progress < 1.0f)
     {
-        FVector NewPos = GetActorLocation() + DashDirection * (DashDistance / DashDuration) * DeltaTime;
+        UpdateColor(FLinearColor::Blue);
+        FVector NewPos = GetActorLocation()
+            + DashDirection * (DashDistance / DashDuration) * DeltaTime;
         SetActorLocation(NewPos);
     }
     else
     {
         DashTimer = 0.0f;
 
-        // Reset color after attack
-        UpdateColor(FLinearColor::White);
-
-        // Check if player still nearby
         float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
         if (Distance < DetectionRadius)
             ChangeState(EEnemyState::Charge);
@@ -139,12 +134,30 @@ void AEnemyBolt::Attack(float DeltaTime)
     }
 }
 
+
 void AEnemyBolt::ChangeState(EEnemyState NewState)
 {
     CurrentState = NewState;
     ChargeTimer = 0.0f;
     DashTimer = 0.0f;
+
+    // Color para cada estado
+    switch (CurrentState)
+    {
+    case EEnemyState::Patrol:
+        UpdateColor(FLinearColor::Yellow);
+        break;
+
+    case EEnemyState::Charge:
+        // No seteamos color directamente, porque ya lo animamos en Tick
+        break;
+
+    case EEnemyState::Attack:
+        UpdateColor(FLinearColor::Blue);
+        break;
+    }
 }
+
 
 void AEnemyBolt::UpdateColor(FLinearColor NewColor)
 {
