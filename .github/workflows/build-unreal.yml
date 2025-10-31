@@ -62,18 +62,23 @@ jobs:
             exit 1
           }
 
-          Write-Host "🚀 Starting Incremental BuildCookRun..."
+          $platform = $env:BUILD_PLATFORM
+          $config = $env:BUILD_CONFIG
+          $project = $env:PROJECT_PATH
+          $archive = $env:ARCHIVE_DIR
+
+          Write-Host "🚀 Starting Incremental BuildCookRun for $platform - $config ..."
           & "$uat" BuildCookRun `
-            -project="$env:PROJECT_PATH" `
+            -project="$project" `
             -noP4 `
-            -platform=$env:BUILD_PLATFORM `
-            -clientconfig=$env:BUILD_CONFIG `
+            -platform=$platform `
+            -clientconfig=$config `
             -build -cook -stage -pak -archive -package -client `
-            -archivedirectory="$env:ARCHIVE_DIR" `
+            -archivedirectory="$archive" `
             -utf8output `
             -iterate -cookpartialgc `
             -CrashReporter -nocompileeditor -NoDebugInfo `
-            | Tee-Object -FilePath "$env:ARCHIVE_DIR\..\BuildLog.txt"
+            | Tee-Object -FilePath "$archive\..\BuildLog.txt"
 
           if ($LASTEXITCODE -ne 0) {
             Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
