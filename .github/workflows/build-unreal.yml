@@ -1,0 +1,60 @@
+name: Unreal Engine — Build & Release Automation
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Unreal Project
+    runs-on: [self-hosted, Windows, X64, Local-1]
+
+    env:
+      UE_PATH: ${{ secrets.UE_PATH }}
+      PROJECT_PATH: ${{ secrets.PROJECT_PATH }}
+      BUILD_PLATFORM: "Win64"
+      BUILD_CONFIG: "Shipping"
+      ARCHIVE_DIR: "C:\\actions-runner\\_work\\TFM\\Build"
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Show system info
+        run: |
+          echo "Running on $env:COMPUTERNAME"
+          echo "Project path: $env:PROJECT_PATH"
+          echo "UE path: $env:UE_PATH"
+
+      - name: Build, Cook, and Package
+        run: |
+          & "$env:UE_PATH\\Engine\\Build\\BatchFiles\\RunUAT.bat" BuildCookRun `
+            -project="$env:PROJECT_PATH" `
+            -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
+            -build -cook -stage -pak -archive `
+            -archivedirectory="$env:ARCHIVE_DIR"
+        shell: pwsh
+
+      - name: Compress build
+        run: |
+          $zipPath = "$env:ARCHIVE_DIR\\Build_${{ github.run_number }}_${{ env.BUILD_PLATFORM }}_${{ env.BUILD_CONFIG }}.zip"
+          Compress-Archive -Path "$env:ARCHIVE_DIR\\*" -DestinationPath $zipPath
+          echo "Build packaged: $zipPath"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "Auto Build ${{ github.run_number }}"
+          body: "Automated Unreal Engine build from main branch"
+          files: |
+            ${{ env.ARCHIVE_DIR }}\\Build_${{ github.run_number }}_${{ env.BUILD_PLATFORM }}_${{ env.BUILD_CONFIG }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
