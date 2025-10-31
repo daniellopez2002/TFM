@@ -95,11 +95,23 @@ jobs:
           }
 
       # 3️⃣ Compress build
-      - name: Save ZIP path to env
+      - name: Compress build
         shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $zipPath = "Build/TFM_$timestamp.zip"
+          $buildDir = "C:\\actions-runner\\_work\\TFM\\Build\\Windows"
+          $zipPath = "C:\\actions-runner\\_work\\TFM\\Build\\TFM_GameBuild_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
+
+          Write-Host "📦 Compressing build to: $zipPath"
+          Compress-Archive -Path "$buildDir\\*" -DestinationPath $zipPath -Force
+
+          if (!(Test-Path $zipPath)) {
+            Write-Error "❌ ZIP file was not created."
+            exit 1
+          } else {
+            Write-Host "✅ Game packaged successfully at: $zipPath"
+          }
+
           Add-Content -Path $env:GITHUB_ENV -Value "ZIP_PATH=$zipPath"
 
       # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
