@@ -31,90 +31,90 @@ jobs:
         run: |
           Write-Host "Runner: $env:COMPUTERNAME"
           if ($env:UE_PATH -and $env:PROJECT_PATH) {
-              Write-Host "Secrets loaded successfully."
+              Write-Host "✅ Secrets loaded successfully."
           } else {
-              Write-Error "Secrets not found. Check UE_PATH and PROJECT_PATH."
+              Write-Error "❌ Secrets not found. Check UE_PATH and PROJECT_PATH."
+              exit 1
           }
           Write-Host "Build Platform: $env:BUILD_PLATFORM"
           Write-Host "Build Config: $env:BUILD_CONFIG"
 
+      # 1️⃣ Pre-build Editor target to ensure .target files exist
+      - name: Pre-build Editor target
+        shell: powershell
+        run: |
+          $ubt = "$env:UE_PATH\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe"
+          Write-Host "🔧 Building TFMEditor target..."
+          & "$ubt" -project="$env:PROJECT_PATH" TFMEditor Win64 Development -progress -NoHotReload
+          if ($LASTEXITCODE -ne 0) {
+              Write-Error "❌ Failed to build TFMEditor target."
+              exit $LASTEXITCODE
+          } else {
+              Write-Host "✅ TFMEditor target built successfully."
+          }
+
+      # 2️⃣ Build, Cook, and Package with RunUAT
       - name: Build, Cook, and Package (UAT)
         shell: powershell
         run: |
-          $uePath = $env:UE_PATH.Trim('"').Trim()
-          $uat = Join-Path $uePath "Engine\Build\BatchFiles\RunUAT.bat"
+          $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
           $logDir = $env:ARCHIVE_DIR
           $logFile = Join-Path $logDir "BuildLog.txt"
 
           if (!(Test-Path $logDir)) {
-              Write-Host "Creating output directory: $logDir"
               New-Item -ItemType Directory -Path $logDir -Force | Out-Null
           }
 
-          if (!(Test-Path $uat)) {
-              Write-Error "RunUAT.bat not found at $uat"
-              exit 1
-          }
-
-          Write-Host "Starting BuildCookRun..."
-          Write-Host "Project: $env:PROJECT_PATH"
-          Write-Host "Output: $logDir"
-
-          $args = @(
-              "BuildCookRun",
-              "-project=$env:PROJECT_PATH",
-              "-noP4",
-              "-platform=$env:BUILD_PLATFORM",
-              "-clientconfig=$env:BUILD_CONFIG",
-              "-build",
-              "-cook",
-              "-stage",
-              "-pak",
-              "-archive",
-              "-archivedirectory=$env:ARCHIVE_DIR",
-              "-utf8output",
-              "-CrashReporter",
-              "-nocompileeditor",
-              "-NoDebugInfo"
-          )
-
-          & "$uat" @args 2>&1 | Tee-Object -FilePath $logFile
+          Write-Host "🚀 Starting BuildCookRun..."
+          & "$uat" BuildCookRun `
+            -project="$env:PROJECT_PATH" `
+            -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
+            -build -cook -stage -pak -archive `
+            -archivedirectory="$env:ARCHIVE_DIR" `
+            -utf8output -CrashReporter -nocompileeditor -NoDebugInfo `
+            | Tee-Object -FilePath $logFile
 
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "Unreal BuildCookRun failed. Check BuildLog.txt for details."
+              Write-Error "❌ BuildCookRun failed. Check BuildLog.txt."
               exit $LASTEXITCODE
           } else {
-              Write-Host "BuildCookRun completed successfully."
+              Write-Host "✅ BuildCookRun completed successfully."
           }
 
+      # 3️⃣ Compress build
       - name: Compress build
         shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $zipPath = "$env:ARCHIVE_DIR\TFM_Build_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
+          $zipPath = "$env:ARCHIVE_DIR\\TFM_Build_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
 
-          Write-Host "Compressing build to: $zipPath"
-          Compress-Archive -Path "$env:ARCHIVE_DIR\*" -DestinationPath $zipPath -Force
-
+          Write-Host "📦 Compressing build to: $zipPath"
+          Compress-Archive -Path "$env:ARCHIVE_DIR\\*" -DestinationPath $zipPath -Force
           if (!(Test-Path $zipPath)) {
-              Write-Error "ZIP file was not created."
+              Write-Error "❌ ZIP file not created."
               exit 1
-          } else {
-              Write-Host "Build packaged successfully at: $zipPath"
           }
-
+          Write-Host "✅ Build packaged successfully."
           echo "ZIP_PATH=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
+      - name: Upload BuildLog
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuildLog
+          path: C:\actions-runner\_work\TFM\Build\BuildLog.txt
+
+      # 5️⃣ Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: "TFM Build ${{ github.run_number }}"
           body: |
-            Automated Unreal Engine 5.5 Build  
-            Platform: ${{ env.BUILD_PLATFORM }}  
-            Config: ${{ env.BUILD_CONFIG }}  
-            Timestamp: ${{ github.run_id }}
+            ✅ Automated Unreal Engine 5.5 Build  
+            • Platform: ${{ env.BUILD_PLATFORM }}  
+            • Config: ${{ env.BUILD_CONFIG }}  
+            • Timestamp: ${{ github.run_id }}
           files: |
             ${{ env.ZIP_PATH }}
         env:
