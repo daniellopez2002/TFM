@@ -46,15 +46,16 @@ jobs:
           $uePath = $env:UE_PATH.Trim('"').Trim()
           $ubt = Join-Path $uePath "Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe"
 
-          Write-Host "🔧 Building TFMEditor target..."
+          Write-Output "Building TFMEditor target..."
           & "$ubt" -project="$env:PROJECT_PATH" TFMEditor Win64 Development -progress -NoHotReload
           
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "Failed to build TFMEditor target."
+              Write-Output "Failed to build TFMEditor target."
               exit $LASTEXITCODE
           } else {
-              Write-Host "TFMEditor target built successfully."
+              Write-Output "TFMEditor target built successfully"
           }
+
 
 
       # 2️⃣ Build, Cook, and Package with RunUAT
