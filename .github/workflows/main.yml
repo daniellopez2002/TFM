@@ -1,0 +1,14 @@
+name: Test Self Hosted Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: [self-hosted, Windows, X64, label-1]
+    steps:
+      - name: Say Hello
+        run: echo "Runner is working on $env:COMPUTERNAME with user $env:USERNAME"
+
+      - name: Check Unreal directory
+        run: dir "C:\Program Files\Epic Games"
