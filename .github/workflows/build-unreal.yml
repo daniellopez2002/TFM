@@ -99,27 +99,36 @@ jobs:
         shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $buildDir = "C:\\actions-runner\\_work\\TFM\\Build\\Windows"
-          $zipPath = "C:\\actions-runner\\_work\\TFM\\Build\\TFM_GameBuild_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
+          $buildDir = "C:\actions-runner\_work\TFM\TFM\Build\Windows"
+          $zipPath = "C:\actions-runner\_work\TFM\TFM\Build\TFM_GameBuild_${{ github.run_number }}_${timestamp}_${env:BUILD_PLATFORM}_${env:BUILD_CONFIG}.zip"
 
-          Write-Host "📦 Compressing build to: $zipPath"
-          Compress-Archive -Path "$buildDir\\*" -DestinationPath $zipPath -Force
+          Write-Host "🗜️ Compressing build from: $buildDir"
+          Write-Host "📦 Destination ZIP: $zipPath"
+
+          if (-Not (Test-Path $buildDir)) {
+            Write-Error "❌ Build folder not found: $buildDir"
+            exit 1
+          }
+
+          Compress-Archive -Path "$buildDir\*" -DestinationPath "$zipPath" -Force
 
           if (!(Test-Path $zipPath)) {
-            Write-Error "❌ ZIP file was not created."
+            Write-Error "❌ ZIP file was not created at $zipPath."
             exit 1
           } else {
             Write-Host "✅ Game packaged successfully at: $zipPath"
           }
 
+          # ✅ Add the ZIP path to GitHub environment variables
           Add-Content -Path $env:GITHUB_ENV -Value "ZIP_PATH=$zipPath"
+
 
       # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
       - name: Upload BuildLog
         uses: actions/upload-artifact@v4
         with:
           name: BuildLog
-          path: C:\actions-runner\_work\TFM\Build\BuildLog.txt
+          path: C:\actions-runner\_work\TFM\TFM\Build\BuildLog.txt
 
       # 5️⃣ Create GitHub Release
       - name: Create GitHub Release
@@ -128,10 +137,10 @@ jobs:
           tag_name: v${{ github.run_number }}
           name: "TFM Build ${{ github.run_number }}"
           body: |
-            ✅ Automated Unreal Engine 5.5 Build  
-            • Platform: ${{ env.BUILD_PLATFORM }}  
-            • Config: ${{ env.BUILD_CONFIG }}  
-            • Timestamp: ${{ github.run_id }}
+            ✅ **Automated Unreal Engine 5.5 Build**
+            • **Platform:** `${{ env.BUILD_PLATFORM }}`
+            • **Config:** `${{ env.BUILD_CONFIG }}`
+            • **Timestamp:** `${{ github.run_id }}`
           files: |
             ${{ env.ZIP_PATH }}
         env:
