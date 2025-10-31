@@ -52,6 +52,20 @@ jobs:
           Write-Host "Build Platform: $env:BUILD_PLATFORM"
           Write-Host "Build Config: $env:BUILD_CONFIG"
 
+
+      - name: Pre-build Editor target
+        shell: powershell
+        run: |
+          $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
+          $project = $env:PROJECT_PATH
+          $platform = $env:BUILD_PLATFORM
+          $config = $env:BUILD_CONFIG
+          $target = "TFMEditor"
+
+          Write-Host "🧱 Building Editor target ($target)..."
+          & $uat BuildEditor -project="$project" -platform=$platform -configuration=$config -target=$target
+
+
       # 4️⃣ Ejecuta el build con Unreal Automation Tool (UAT)
       - name: Build, Cook, and Package (Incremental UAT)
         shell: powershell
