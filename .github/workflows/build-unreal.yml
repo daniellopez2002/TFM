@@ -17,109 +17,102 @@ jobs:
       PROJECT_PATH: ${{ secrets.PROJECT_PATH }}
       BUILD_PLATFORM: "Win64"
       BUILD_CONFIG: "Shipping"
-      ARCHIVE_DIR: "C:\\actions-runner\\_work\\TFM\\Build"
+      ARCHIVE_DIR: "C:\\actions-runner\\_work\\TFM\\Build\\WindowsNoEditor"
 
     steps:
+      # 1️⃣ Clona el repositorio completo (incluyendo LFS)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
 
+      # 2️⃣ Cache incremental (compilación y datos derivados)
+      - name: Cache Unreal Derived Data
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\actions-runner\_work\TFM\TFM\DerivedDataCache
+            C:\actions-runner\_work\TFM\TFM\Intermediate
+            C:\actions-runner\_work\TFM\TFM\Saved
+          key: ue5-cache-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_CONFIG }}-${{ hashFiles('Source/**/*.cpp', 'Source/**/*.h', 'Content/**/*.uasset', 'Content/**/*.umap') }}
+          restore-keys: |
+            ue5-cache-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_CONFIG }}-
+
+      # 3️⃣ Muestra información del entorno y secretos (sin revelar valores)
       - name: Verify environment
-        shell: powershell
+        shell: pwsh
         run: |
           Write-Host "Runner: $env:COMPUTERNAME"
           if ($env:UE_PATH -and $env:PROJECT_PATH) {
-              Write-Host "✅ Secrets loaded successfully."
+            Write-Host "✅ Secrets loaded successfully."
           } else {
-              Write-Error "❌ Secrets not found. Check UE_PATH and PROJECT_PATH."
-              exit 1
+            Write-Error "❌ Secrets not found. Check UE_PATH and PROJECT_PATH."
           }
           Write-Host "Build Platform: $env:BUILD_PLATFORM"
           Write-Host "Build Config: $env:BUILD_CONFIG"
 
-      # 1️⃣ Pre-build Editor target to ensure .target files exist
-      - name: Pre-build Editor target
-        shell: powershell
-        run: |
-          $uePath = $env:UE_PATH.Trim('"').Trim()
-          $ubt = Join-Path $uePath "Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe"
-
-          Write-Output "Building TFMEditor target..."
-          & "$ubt" -project="$env:PROJECT_PATH" TFMEditor Win64 Development -progress -NoHotReload
-          
-          if ($LASTEXITCODE -ne 0) {
-              Write-Output "Failed to build TFMEditor target."
-              exit $LASTEXITCODE
-          } else {
-              Write-Output "TFMEditor target built successfully"
-          }
-
-
-
-      # 2️⃣ Build, Cook, and Package with RunUAT
-      - name: Build, Cook, and Package (UAT)
-        shell: powershell
+      # 4️⃣ Ejecuta el build con Unreal Automation Tool (UAT)
+      - name: Build, Cook, and Package (Incremental UAT)
+        shell: pwsh
         run: |
           $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
-          $logDir = $env:ARCHIVE_DIR
-          $logFile = Join-Path $logDir "BuildLog.txt"
-
-          if (!(Test-Path $logDir)) {
-              New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+          if (!(Test-Path $uat)) {
+            Write-Error "❌ RunUAT.bat not found at $uat"
+            exit 1
           }
 
-          Write-Host "🚀 Starting BuildCookRun..."
-          Write-Host "Project: $env:PROJECT_PATH"
-          Write-Host "Platform: $env:BUILD_PLATFORM"
-          Write-Host "Config: $env:BUILD_CONFIG"
-
-          & $uat BuildCookRun `
+          Write-Host "🚀 Starting Incremental BuildCookRun..."
+          & "$uat" BuildCookRun `
             -project="$env:PROJECT_PATH" `
             -noP4 `
-            -platform:$env:BUILD_PLATFORM `
-            -clientconfig:$env:BUILD_CONFIG `
-            -build -cook -stage -pak -archive `
-            -archivedirectory:$env:ARCHIVE_DIR `
-            -utf8output -CrashReporter -nocompileeditor -NoDebugInfo `
-            | Tee-Object -FilePath $logFile
+            -platform=$env:BUILD_PLATFORM `
+            -clientconfig=$env:BUILD_CONFIG `
+            -build -cook -stage -pak -archive -package -client `
+            -archivedirectory="$env:ARCHIVE_DIR" `
+            -utf8output `
+            -iterate -cookpartialgc `
+            -CrashReporter -nocompileeditor -NoDebugInfo `
+            | Tee-Object -FilePath "$env:ARCHIVE_DIR\..\BuildLog.txt"
 
           if ($LASTEXITCODE -ne 0) {
-              Write-Error "❌ BuildCookRun failed. Check BuildLog.txt."
-              exit $LASTEXITCODE
+            Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
+            exit $LASTEXITCODE
           } else {
-              Write-Host "✅ BuildCookRun completed successfully."
+            Write-Host "✅ BuildCookRun completed successfully."
           }
 
-
-      # 3️⃣ Compress build
-      - name: Save ZIP path to env
-        shell: powershell
+      # 5️⃣ Comprime el build final jugable
+      - name: Compress build
+        shell: pwsh
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $zipPath = "Build/TFM_$timestamp.zip"
+          $buildDir = "C:\\actions-runner\\_work\\TFM\\Build\\WindowsNoEditor"
+          $zipPath = "C:\\actions-runner\\_work\\TFM\\Build\\TFM_GameBuild_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
+
+          Write-Host "📦 Compressing build to: $zipPath"
+          Compress-Archive -Path "$buildDir\\*" -DestinationPath $zipPath -Force
+
+          if (!(Test-Path $zipPath)) {
+            Write-Error "❌ ZIP file was not created."
+            exit 1
+          } else {
+            Write-Host "✅ Game packaged successfully at: $zipPath"
+          }
+
           Add-Content -Path $env:GITHUB_ENV -Value "ZIP_PATH=$zipPath"
 
-
-      # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
-      - name: Upload BuildLog
-        uses: actions/upload-artifact@v4
-        with:
-          name: BuildLog
-          path: C:\actions-runner\_work\TFM\Build\BuildLog.txt
-
-      # 5️⃣ Create GitHub Release
+      # 6️⃣ Publica el release en GitHub
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: "TFM Build ${{ github.run_number }}"
           body: |
-            ✅ Automated Unreal Engine 5.5 Build  
-            • Platform: ${{ env.BUILD_PLATFORM }}  
-            • Config: ${{ env.BUILD_CONFIG }}  
-            • Timestamp: ${{ github.run_id }}
+            🎮 **TFM — Unreal Engine 5.5 Incremental Build (Playable)**  
+            ✅ Platform: ${{ env.BUILD_PLATFORM }}  
+            ⚙️ Config: ${{ env.BUILD_CONFIG }}  
+            🕐 Timestamp: ${{ github.run_id }}
           files: |
             ${{ env.ZIP_PATH }}
         env:
