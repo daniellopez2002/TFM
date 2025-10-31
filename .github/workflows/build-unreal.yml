@@ -68,17 +68,21 @@ jobs:
           $archive = $env:ARCHIVE_DIR
 
           Write-Host "🚀 Starting Incremental BuildCookRun for $platform - $config ..."
-          & "$uat" BuildCookRun `
-            -project="$project" `
-            -noP4 `
-            -platform=$platform `
-            -clientconfig=$config `
-            -build -cook -stage -pak -archive -package -client `
-            -archivedirectory="$archive" `
-            -utf8output `
-            -iterate -cookpartialgc `
-            -CrashReporter -nocompileeditor -NoDebugInfo `
-            | Tee-Object -FilePath "$archive\..\BuildLog.txt"
+          
+          $arguments = @(
+            "BuildCookRun",
+            "-project=`"$project`"",
+            "-noP4",
+            "-platform=$platform",
+            "-clientconfig=$config",
+            "-build", "-cook", "-stage", "-pak", "-archive", "-package", "-client",
+            "-archivedirectory=`"$archive`"",
+            "-utf8output",
+            "-iterate", "-cookpartialgc",
+            "-CrashReporter", "-nocompileeditor", "-NoDebugInfo"
+          )
+
+          & $uat @arguments | Tee-Object -FilePath "$archive\..\BuildLog.txt"
 
           if ($LASTEXITCODE -ne 0) {
             Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
@@ -86,6 +90,7 @@ jobs:
           } else {
             Write-Host "✅ BuildCookRun completed successfully."
           }
+
 
       # 5️⃣ Comprime el build final jugable
       - name: Compress build
