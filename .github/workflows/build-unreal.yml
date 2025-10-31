@@ -66,7 +66,7 @@ jobs:
           $config = $env:BUILD_CONFIG
           $project = $env:PROJECT_PATH
           $archive = $env:ARCHIVE_DIR
-          $target = "TFM"  # <-- Este es el nombre de tu archivo TFM.Target.cs
+          $target = "TFM"
 
           Write-Host "🚀 Starting Incremental BuildCookRun for $target ($platform - $config) ..."
           
@@ -77,7 +77,7 @@ jobs:
             "-target=$target",
             "-platform=$platform",
             "-clientconfig=$config",
-            "-build", "-cook", "-stage", "-pak", "-archive", "-package", "-client",
+            "-build", "-cook", "-stage", "-pak", "-archive", "-package",
             "-archivedirectory=`"$archive`"",
             "-utf8output",
             "-iterate", "-cookpartialgc",
@@ -92,6 +92,7 @@ jobs:
           } else {
             Write-Host "✅ BuildCookRun completed successfully."
           }
+
 
       # 5️⃣ Comprime el build final jugable
       - name: Compress build
