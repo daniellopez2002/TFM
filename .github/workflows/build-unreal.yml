@@ -44,32 +44,41 @@ jobs:
       - name: Build, Cook, and Package (UAT)
         shell: powershell
         run: |
-          $uat = "$env:UE_PATH\Engine\Build\BatchFiles\RunUAT.bat"
-          if (!(Test-Path $uat)) {
-            Write-Error "❌ RunUAT.bat not found at $uat"
-            exit 1
+          # Limpieza de comillas residuales
+          $uePath = $env:UE_PATH.Trim('"').Trim()
+          $uat = Join-Path $uePath "Engine\Build\BatchFiles\RunUAT.bat"
+      
+          # Crear directorio de salida si no existe
+          if (!(Test-Path $env:ARCHIVE_DIR)) {
+              Write-Host "📁 Creating output directory: $env:ARCHIVE_DIR"
+              New-Item -ItemType Directory -Path $env:ARCHIVE_DIR | Out-Null
           }
-
+      
+          if (!(Test-Path $uat)) {
+              Write-Error "❌ RunUAT.bat not found at $uat"
+              exit 1
+          }
+      
           Write-Host "🚀 Starting BuildCookRun..."
           Write-Host "Project: $env:PROJECT_PATH"
           Write-Host "Output: $env:ARCHIVE_DIR"
-
-          # Inicia el build
+      
+          # Ejecutar BuildCookRun y guardar log
           & "$uat" BuildCookRun `
-            -project="$env:PROJECT_PATH" `
-            -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
-            -build -cook -stage -pak -archive `
-            -archivedirectory="$env:ARCHIVE_DIR" `
-            -utf8output `
-            -CrashReporter `
-            -nocompileeditor `
-            -NoDebugInfo | Tee-Object -FilePath "$env:ARCHIVE_DIR\BuildLog.txt"
-
+              -project="$env:PROJECT_PATH" `
+              -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
+              -build -cook -stage -pak -archive `
+              -archivedirectory="$env:ARCHIVE_DIR" `
+              -utf8output `
+              -CrashReporter `
+              -nocompileeditor `
+              -NoDebugInfo | Tee-Object -FilePath "$env:ARCHIVE_DIR\BuildLog.txt"
+      
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
-            exit $LASTEXITCODE
+              Write-Error "❌ Unreal BuildCookRun failed. Check BuildLog.txt for details."
+              exit $LASTEXITCODE
           } else {
-            Write-Host "✅ BuildCookRun completed successfully."
+              Write-Host "✅ BuildCookRun completed successfully."
           }
 
       # 4️⃣ Comprime el build completo
