@@ -63,8 +63,9 @@ jobs:
           $target = "TFMEditor"
 
           Write-Host "🧱 Building Editor target ($target)..."
-          
-          & $uat BuildEditor -project="$project" -platform=$platform -configuration=$config -target=$target
+
+          # Unreal AutomationTool no usa '-configuration' aquí
+          & $uat BuildEditor -project="$project" -platform=$platform -config=$config -target=$target
 
           if ($LASTEXITCODE -ne 0) {
             Write-Error "❌ Failed to build $target target."
