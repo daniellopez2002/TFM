@@ -119,9 +119,7 @@ jobs:
             Write-Host "✅ Game packaged successfully at: $zipPath"
           }
 
-          # ✅ Add the ZIP path to GitHub environment variables
-          Add-Content -Path $env:GITHUB_ENV -Value "ZIP_PATH=$zipPath"
-
+          Add-Content -Path $env:GITHUB_ENV -Value ('ZIP_PATH=' + $zipPath)
 
       # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
       - name: Upload BuildLog
