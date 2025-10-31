@@ -95,7 +95,7 @@ jobs:
 
       # 3️⃣ Compress build
       - name: Save ZIP path to env
-        shell: pwsh
+        shell: powershell
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
           $zipPath = "Build/TFM_$timestamp.zip"
