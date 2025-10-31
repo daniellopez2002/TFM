@@ -94,20 +94,13 @@ jobs:
 
 
       # 3️⃣ Compress build
-      - name: Compress build
-        shell: powershell
+      - name: Save ZIP path to env
+        shell: pwsh
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-          $zipPath = "$env:ARCHIVE_DIR\\TFM_Build_${{ github.run_number }}_${timestamp}_${env.BUILD_PLATFORM}_${env.BUILD_CONFIG}.zip"
+          $zipPath = "Build/TFM_$timestamp.zip"
+          Add-Content -Path $env:GITHUB_ENV -Value "ZIP_PATH=$zipPath"
 
-          Write-Host "📦 Compressing build to: $zipPath"
-          Compress-Archive -Path "$env:ARCHIVE_DIR\\*" -DestinationPath $zipPath -Force
-          if (!(Test-Path $zipPath)) {
-              Write-Error "❌ ZIP file not created."
-              exit 1
-          }
-          Write-Host "✅ Build packaged successfully."
-          echo "ZIP_PATH=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       # 4️⃣ Upload BuildLog as artifact (optional but useful for debugging)
       - name: Upload BuildLog
