@@ -71,11 +71,17 @@ jobs:
           }
 
           Write-Host "🚀 Starting BuildCookRun..."
-          & "$uat" BuildCookRun `
+          Write-Host "Project: $env:PROJECT_PATH"
+          Write-Host "Platform: $env:BUILD_PLATFORM"
+          Write-Host "Config: $env:BUILD_CONFIG"
+
+          & $uat BuildCookRun `
             -project="$env:PROJECT_PATH" `
-            -noP4 -platform=$env:BUILD_PLATFORM -clientconfig=$env:BUILD_CONFIG `
+            -noP4 `
+            -platform:$env:BUILD_PLATFORM `
+            -clientconfig:$env:BUILD_CONFIG `
             -build -cook -stage -pak -archive `
-            -archivedirectory="$env:ARCHIVE_DIR" `
+            -archivedirectory:$env:ARCHIVE_DIR `
             -utf8output -CrashReporter -nocompileeditor -NoDebugInfo `
             | Tee-Object -FilePath $logFile
 
@@ -85,6 +91,7 @@ jobs:
           } else {
               Write-Host "✅ BuildCookRun completed successfully."
           }
+
 
       # 3️⃣ Compress build
       - name: Compress build
