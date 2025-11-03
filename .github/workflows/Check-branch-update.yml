@@ -1,0 +1,26 @@
+name: Check if branch is up to date with main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-up-to-date:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base and head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if branch is behind main
+        run: |
+          git fetch origin main
+          BEHIND=$(git rev-list --left-only --count origin/${{ github.event.pull_request.head.ref }}...origin/main)
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "Branch is behind main by $BEHIND commits."
+            exit 1
+          else
+            echo "Branch is up to date with main."
+          fi
