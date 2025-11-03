@@ -19,13 +19,21 @@ jobs:
         run: |
           git fetch origin main:refs/remotes/origin/main
 
-      - name: Check if branch is behind main
+      - name: Check if branch is up to date with main
         id: check
         run: |
-          BEHIND=$(git rev-list --left-only --count origin/${{ github.event.pull_request.head.ref }}...origin/main)
+          git fetch origin main:refs/remotes/origin/main
+      
+          BEHIND=$(git rev-list --left-only --count origin/main...origin/${{ github.event.pull_request.head.ref }})
+          AHEAD=$(git rev-list --right-only --count origin/main...origin/${{ github.event.pull_request.head.ref }})
+      
+          echo "Commits behind main: $BEHIND"
+          echo "Commits ahead of main: $AHEAD"
+      
           if [ "$BEHIND" -gt 0 ]; then
             echo "Branch is behind main by $BEHIND commits."
             exit 1
-          else
-            echo "Branch is up to date with main."
           fi
+      
+          echo "Branch is up to date with main (ahead by $AHEAD commits)."
+
