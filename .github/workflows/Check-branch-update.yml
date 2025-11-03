@@ -9,14 +9,19 @@ jobs:
   check-up-to-date:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout base and head
+      - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Fetch main branch
+        run: |
+          git fetch origin main:refs/remotes/origin/main
 
       - name: Check if branch is behind main
+        id: check
         run: |
-          git fetch origin main
           BEHIND=$(git rev-list --left-only --count origin/${{ github.event.pull_request.head.ref }}...origin/main)
           if [ "$BEHIND" -gt 0 ]; then
             echo "Branch is behind main by $BEHIND commits."
