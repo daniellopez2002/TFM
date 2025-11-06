@@ -1,20 +1,19 @@
-﻿#include "EnemyBolt.h"
+#include "Engine/TargetPoint.h"
+#include "TFMEnemyBolt.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/StaticMeshComponent.h"
 
-AEnemyBolt::AEnemyBolt()
+ATFMEnemyBolt::ATFMEnemyBolt()
 {
     PrimaryActorTick.bCanEverTick = true;
 
     MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
     RootComponent = MeshComp;
 
-    SphereComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SphereComp"));
-    SphereComp->SetupAttachment(MeshComp);
 }
 
-void AEnemyBolt::BeginPlay()
+void ATFMEnemyBolt::BeginPlay()
 {
     Super::BeginPlay();
 
@@ -26,17 +25,17 @@ void AEnemyBolt::BeginPlay()
 
     PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 
-    if (SphereComp && SphereComp->GetMaterial(0))
+    if (MeshComp && MeshComp->GetMaterial(0))
     {
-        DynamicMaterial = UMaterialInstanceDynamic::Create(SphereComp->GetMaterial(0), this);
-        SphereComp->SetMaterial(0, DynamicMaterial);
+        DynamicMaterial = UMaterialInstanceDynamic::Create(MeshComp->GetMaterial(0), this);
+        MeshComp->SetMaterial(0, DynamicMaterial);
     }
 
-    // Estado inicial color amarillo
+    // Initial state yellow
     UpdateColor(FLinearColor::Yellow);
 }
 
-void AEnemyBolt::Tick(float DeltaTime)
+void ATFMEnemyBolt::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
@@ -49,7 +48,7 @@ void AEnemyBolt::Tick(float DeltaTime)
     case EEnemyState::Charge:
         Charge(DeltaTime);
 
-        // Parpadeo rojo blanco
+        // Switch red and white
         if (DynamicMaterial)
         {
             float Pulse = (FMath::Sin(GetWorld()->GetTimeSeconds() * 8.0f) + 1.0f) * 0.5f;
@@ -75,7 +74,7 @@ void AEnemyBolt::Tick(float DeltaTime)
     }
 }
 
-void AEnemyBolt::Patrol(float DeltaTime)
+void ATFMEnemyBolt::Patrol(float DeltaTime)
 {
     if (PatrolPoints.Num() == 0) return;
 
@@ -95,7 +94,7 @@ void AEnemyBolt::Patrol(float DeltaTime)
     }
 }
 
-void AEnemyBolt::Charge(float DeltaTime)
+void ATFMEnemyBolt::Charge(float DeltaTime)
 {
     ChargeTimer += DeltaTime;
 
@@ -110,7 +109,7 @@ void AEnemyBolt::Charge(float DeltaTime)
     }
 }
 
-void AEnemyBolt::Attack(float DeltaTime)
+void ATFMEnemyBolt::Attack(float DeltaTime)
 {
     DashTimer += DeltaTime;
     float Progress = DashTimer / DashDuration;
@@ -135,7 +134,7 @@ void AEnemyBolt::Attack(float DeltaTime)
 }
 
 
-void AEnemyBolt::ChangeState(EEnemyState NewState)
+void ATFMEnemyBolt::ChangeState(EEnemyState NewState)
 {
     CurrentState = NewState;
     ChargeTimer = 0.0f;
@@ -159,7 +158,7 @@ void AEnemyBolt::ChangeState(EEnemyState NewState)
 }
 
 
-void AEnemyBolt::UpdateColor(FLinearColor NewColor)
+void ATFMEnemyBolt::UpdateColor(FLinearColor NewColor)
 {
     if (DynamicMaterial)
     {

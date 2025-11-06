@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Engine/TargetPoint.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
-#include "EnemyBolt.generated.h"
+#include "TFMEnemyBolt.generated.h"
+
 
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
@@ -13,12 +15,12 @@ enum class EEnemyState : uint8
 };
 
 UCLASS()
-class TFM_API AEnemyBolt : public APawn
+class TFM_API ATFMEnemyBolt : public APawn
 {
     GENERATED_BODY()
 
 public:
-    AEnemyBolt();
+    ATFMEnemyBolt();
 
 protected:
     virtual void BeginPlay() override;
@@ -27,36 +29,36 @@ protected:
     // --- State ---
     EEnemyState CurrentState;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyBolt|Components")
     UStaticMeshComponent* SphereComp;
 
 
     // --- Patrol ---
-    UPROPERTY(EditAnywhere, Category = "Patrol")
-    TArray<AActor*> PatrolPoints;
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Patrol")
+    TArray<ATargetPoint*> PatrolPoints;
 
     int CurrentPatrolIndex;
     FVector CurrentTarget;
 
-    UPROPERTY(EditAnywhere, Category = "Movement")
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Movement")
     float PatrolSpeed = 300.0f; // 3 m/s (300 cm/s)
 
     float WaitTime = 0.0f;
 
     // --- Player detection ---
-    UPROPERTY(EditAnywhere, Category = "Detection")
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Detection")
     float DetectionRadius = 500.0f; // 5 m = 500 cm
 
     APawn* PlayerPawn;
 
     // --- Charge & Attack ---
-    UPROPERTY(EditAnywhere, Category = "Attack")
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
     float ChargeTime = 3.0f;
 
-    UPROPERTY(EditAnywhere, Category = "Attack")
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
     float DashDistance = 500.0f;
 
-    UPROPERTY(EditAnywhere, Category = "Attack")
+    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
     float DashDuration = 0.5f;
 
     float ChargeTimer = 0.0f;
