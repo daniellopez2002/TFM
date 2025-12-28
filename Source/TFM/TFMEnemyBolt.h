@@ -3,6 +3,7 @@
 #include "Engine/TargetPoint.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "Components/ArrowComponent.h"
 #include "TFMEnemyBolt.generated.h"
 
 
@@ -26,11 +27,12 @@ protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
+    //components
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyBolt|Components")
+	UArrowComponent* ArrowComp;
+
     // --- State ---
     EEnemyState CurrentState;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyBolt|Components")
-    UStaticMeshComponent* SphereComp;
 
 
     // --- Patrol ---
@@ -66,7 +68,7 @@ protected:
     float DashTimer = 0.0f;
 
     // --- Visuals ---
-    UPROPERTY(VisibleAnywhere, Category = "Visual")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Visual")
     UStaticMeshComponent* MeshComp;
 
     UMaterialInstanceDynamic* DynamicMaterial;
