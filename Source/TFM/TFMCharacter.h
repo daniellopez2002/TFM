@@ -27,7 +27,7 @@ class ATFMCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
-	
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
@@ -44,8 +44,22 @@ class ATFMCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	/** Rollig Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RollAction;
+
+
 public:
 	ATFMCharacter();
+
+	UPROPERTY(BlueprintReadWrite)
+	bool IsRolling;
+
+	UFUNCTION(BlueprintCallable)
+	void ActivateGodMode();
+
+	UFUNCTION(BlueprintCallable)
+	void DeactivateGodMode();
 	
 
 protected:
@@ -55,6 +69,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	void StartRoll();
+	void EndsRoll();
 			
 
 protected:
