@@ -51,15 +51,6 @@ class ATFMCharacter : public ACharacter
 
 public:
 	ATFMCharacter();
-
-	UPROPERTY(BlueprintReadWrite)
-	bool IsRolling;
-
-	UFUNCTION(BlueprintCallable)
-	void ActivateGodMode();
-
-	UFUNCTION(BlueprintCallable)
-	void DeactivateGodMode();
 	
 
 protected:
@@ -85,5 +76,14 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsRolling;
+
+	UFUNCTION(BlueprintCallable)
+	void ActivateGodMode();
+
+	UFUNCTION(BlueprintCallable)
+	void DeactivateGodMode();
 };
 
