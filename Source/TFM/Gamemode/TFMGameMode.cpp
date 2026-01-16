@@ -1,7 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "TFMGameMode.h"
-#include "TFMCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
 ATFMGameMode::ATFMGameMode()

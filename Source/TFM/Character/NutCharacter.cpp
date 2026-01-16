@@ -1,6 +1,6 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "TFMCharacter.h"
+#include "NutCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,12 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
-DEFINE_LOG_CATEGORY(LogTemplateCharacter);
-
-//////////////////////////////////////////////////////////////////////////
-// ATFMCharacter
-
-ATFMCharacter::ATFMCharacter()
+ANutCharacter::ANutCharacter()
 {
 	IsRolling = false;
 
@@ -60,7 +55,7 @@ ATFMCharacter::ATFMCharacter()
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void ATFMCharacter::NotifyControllerChanged()
+void ANutCharacter::NotifyControllerChanged()
 {
 	Super::NotifyControllerChanged();
 
@@ -74,7 +69,7 @@ void ATFMCharacter::NotifyControllerChanged()
 	}
 }
 
-void ATFMCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
@@ -84,14 +79,14 @@ void ATFMCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATFMCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANutCharacter::Move);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATFMCharacter::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANutCharacter::Look);
 
 		//Rolling
-		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ATFMCharacter::StartRoll);
-		//EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Completed, this, &ATFMCharacter::EndsRoll);
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::StartRoll);
+		//EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Completed, this, &ANutCharacter::EndsRoll);
 	}
 	else
 	{
@@ -99,7 +94,7 @@ void ATFMCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	}
 }
 
-void ATFMCharacter::Move(const FInputActionValue& Value)
+void ANutCharacter::Move(const FInputActionValue& Value)
 {
 	if (IsRolling)
 		return;
@@ -125,7 +120,7 @@ void ATFMCharacter::Move(const FInputActionValue& Value)
 }
 
 
-void ATFMCharacter::Look(const FInputActionValue& Value)
+void ANutCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -138,27 +133,27 @@ void ATFMCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void ATFMCharacter::ActivateGodMode()
+void ANutCharacter::ActivateGodMode()
 {
 	//This is gonna be called in animation notify
 	// Here we gonna activate god mode for the character to avoid damage 
 	// 	
 }
 
-void ATFMCharacter::DeactivateGodMode()
+void ANutCharacter::DeactivateGodMode()
 {
 	//This is gonna be called in animation notify
 	// Here we gonna deactivate god mode for the character to receive damage again
 	//
 	EndsRoll();
 }
-void ATFMCharacter::StartRoll()
+void ANutCharacter::StartRoll()
 {
 	IsRolling = true;
 	
 }
 
-void ATFMCharacter::EndsRoll()
+void ANutCharacter::EndsRoll()
 {
 	IsRolling = false;
 }

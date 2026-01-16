@@ -68,7 +68,7 @@ protected:
     float DashTimer = 0.0f;
 
     // --- Visuals ---
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Visual")
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Visual")
     UStaticMeshComponent* MeshComp;
 
     UMaterialInstanceDynamic* DynamicMaterial;
