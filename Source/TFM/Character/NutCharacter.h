@@ -11,8 +11,6 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
-
 UCLASS(config=Game)
 class ANutCharacter : public ACharacter
 {
@@ -75,6 +73,9 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	UPROPERTY(BlueprintReadWrite) 
+	FVector CheckpointLocation;
+
 	UPROPERTY(BlueprintReadOnly)
 	bool IsRolling;
 
@@ -83,5 +84,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void DeactivateGodMode();
+
+	UFUNCTION(BlueprintCallable)
+	void SetCheckpoint(FVector location);
+	
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
 };
 

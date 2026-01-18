@@ -1,6 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
-
-#include "NutCharacter.h"
+﻿#include "NutCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -88,12 +86,9 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::StartRoll);
 		//EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Completed, this, &ANutCharacter::EndsRoll);
 	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
 }
 
+// Movement Input
 void ANutCharacter::Move(const FInputActionValue& Value)
 {
 	if (IsRolling)
@@ -108,8 +103,8 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 	const FRotator Rotation = Controller->GetControlRotation();
 	const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-	const FVector DesiredDir = (FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * MovementVector.Y) +
-		(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * MovementVector.X);
+	const FVector DesiredDir = (FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * MovementVector.X) +
+		(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * -MovementVector.Y);
 
 	FRotator TaregtRot = DesiredDir.Rotation();
 	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
@@ -133,6 +128,7 @@ void ANutCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+// God Mode Activation/Deactivation
 void ANutCharacter::ActivateGodMode()
 {
 	//This is gonna be called in animation notify
@@ -147,6 +143,8 @@ void ANutCharacter::DeactivateGodMode()
 	//
 	EndsRoll();
 }
+
+// Rolling
 void ANutCharacter::StartRoll()
 {
 	IsRolling = true;
@@ -156,4 +154,16 @@ void ANutCharacter::StartRoll()
 void ANutCharacter::EndsRoll()
 {
 	IsRolling = false;
+}
+
+// Checkpoint System
+void ANutCharacter::SetCheckpoint(FVector location)
+{
+	CheckpointLocation = location;
+}
+
+void ANutCharacter::Respawn()
+{
+	// Teleport the character to the checkpoint location
+	SetActorLocation(CheckpointLocation);	
 }
