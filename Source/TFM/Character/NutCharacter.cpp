@@ -1,6 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
-#include "TFMCharacter.h"
+﻿#include "NutCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,13 +9,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
-DEFINE_LOG_CATEGORY(LogTemplateCharacter);
-
-//////////////////////////////////////////////////////////////////////////
-// ATFMCharacter
-
-ATFMCharacter::ATFMCharacter()
+ANutCharacter::ANutCharacter()
 {
+	IsRolling = false;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -27,8 +22,9 @@ ATFMCharacter::ATFMCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 100.0f, 0.0f); // ...at this rotation rate
+	GetCharacterMovement()->bOrientRotationToMovement = false; // Character moves in the direction of input...
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
 	// instead of recompiling to adjust them
@@ -57,7 +53,7 @@ ATFMCharacter::ATFMCharacter()
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void ATFMCharacter::NotifyControllerChanged()
+void ANutCharacter::NotifyControllerChanged()
 {
 	Super::NotifyControllerChanged();
 
@@ -71,7 +67,7 @@ void ATFMCharacter::NotifyControllerChanged()
 	}
 }
 
-void ATFMCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
@@ -81,41 +77,45 @@ void ATFMCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATFMCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANutCharacter::Move);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATFMCharacter::Look);
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANutCharacter::Look);
+
+		//Rolling
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::StartRoll);
+		//EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Completed, this, &ANutCharacter::EndsRoll);
 	}
 }
 
-void ATFMCharacter::Move(const FInputActionValue& Value)
+// Movement Input
+void ANutCharacter::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	if (IsRolling)
+		return;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
-
-	if (Controller != nullptr)
+	if (Controller == nullptr || MovementVector.IsNearlyZero())
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-	
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// add movement 
-		AddMovementInput(ForwardDirection, -MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		return;
 	}
+
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+	const FVector DesiredDir = (FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X) * MovementVector.X) +
+		(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y) * -MovementVector.Y);
+
+	FRotator TaregtRot = DesiredDir.Rotation();
+	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
+
+	SetActorRotation(SmothRot);
+
+	AddMovementInput(DesiredDir.GetSafeNormal());
 }
 
-void ATFMCharacter::Look(const FInputActionValue& Value)
+
+void ANutCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -126,4 +126,44 @@ void ATFMCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+// God Mode Activation/Deactivation
+void ANutCharacter::ActivateGodMode()
+{
+	//This is gonna be called in animation notify
+	// Here we gonna activate god mode for the character to avoid damage 
+	// 	
+}
+
+void ANutCharacter::DeactivateGodMode()
+{
+	//This is gonna be called in animation notify
+	// Here we gonna deactivate god mode for the character to receive damage again
+	//
+	EndsRoll();
+}
+
+// Rolling
+void ANutCharacter::StartRoll()
+{
+	IsRolling = true;
+	
+}
+
+void ANutCharacter::EndsRoll()
+{
+	IsRolling = false;
+}
+
+// Checkpoint System
+void ANutCharacter::SetCheckpoint(FVector location)
+{
+	CheckpointLocation = location;
+}
+
+void ANutCharacter::Respawn()
+{
+	// Teleport the character to the checkpoint location
+	SetActorLocation(CheckpointLocation);	
 }

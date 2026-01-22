@@ -1,11 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "TFMCharacter.generated.h"
+#include "NutCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
@@ -13,10 +11,8 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
-DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
-
 UCLASS(config=Game)
-class ATFMCharacter : public ACharacter
+class ANutCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -27,7 +23,7 @@ class ATFMCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
-	
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultMappingContext;
@@ -44,8 +40,13 @@ class ATFMCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	/** Rollig Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* RollAction;
+
+
 public:
-	ATFMCharacter();
+	ANutCharacter();
 	
 
 protected:
@@ -55,6 +56,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	void StartRoll();
+	void EndsRoll();
 			
 
 protected:
@@ -68,5 +72,23 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	UPROPERTY(BlueprintReadWrite) 
+	FVector CheckpointLocation;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsRolling;
+
+	UFUNCTION(BlueprintCallable)
+	void ActivateGodMode();
+
+	UFUNCTION(BlueprintCallable)
+	void DeactivateGodMode();
+
+	UFUNCTION(BlueprintCallable)
+	void SetCheckpoint(FVector location);
+	
+	UFUNCTION(BlueprintCallable)
+	void Respawn();
 };
 

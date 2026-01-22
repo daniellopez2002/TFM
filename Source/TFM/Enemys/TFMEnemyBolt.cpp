@@ -1,5 +1,5 @@
-#include "Engine/TargetPoint.h"
 #include "TFMEnemyBolt.h"
+#include "Engine/TargetPoint.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/StaticMeshComponent.h"
@@ -9,13 +9,14 @@ ATFMEnemyBolt::ATFMEnemyBolt()
     PrimaryActorTick.bCanEverTick = true;
 
     MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
-    RootComponent = MeshComp;
+	ArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
 }
 
 void ATFMEnemyBolt::BeginPlay()
 {
     Super::BeginPlay();
+
 
     CurrentState = EEnemyState::Patrol;
     CurrentPatrolIndex = 0;
