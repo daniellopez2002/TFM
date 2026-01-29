@@ -109,7 +109,10 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 	FRotator TaregtRot = DesiredDir.Rotation();
 	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
 
-	SetActorRotation(SmothRot);
+	if (!ActorFocus)
+	{
+		SetActorRotation(SmothRot);
+	}
 
 	AddMovementInput(DesiredDir.GetSafeNormal());
 }
@@ -126,6 +129,11 @@ void ANutCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ANutCharacter::Attack(const FInputActionValue& Value)
+{
+
 }
 
 // God Mode Activation/Deactivation
@@ -166,4 +174,35 @@ void ANutCharacter::Respawn()
 {
 	// Teleport the character to the checkpoint location
 	SetActorLocation(CheckpointLocation);	
+}
+
+void ANutCharacter::HandleFocus(float DeltaTime)
+{
+	if (!ActorFocus)
+		return;
+
+	FVector ToTarget =
+		ActorFocus->GetActorLocation() - GetActorLocation();
+
+	ToTarget.Z = 0.f;
+
+	FRotator TargetRot = ToTarget.Rotation();
+	FRotator NewRot = FMath::RInterpTo(
+		GetActorRotation(),
+		TargetRot,
+		DeltaTime,
+		FocusInterpSpeed
+	);
+
+	SetActorRotation(NewRot);
+}
+
+void ANutCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!IsRolling && ActorFocus)
+	{
+		HandleFocus(DeltaTime);
+	}
 }

@@ -44,6 +44,9 @@ class ANutCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RollAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
 
 public:
 	ANutCharacter();
@@ -57,8 +60,14 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	void Attack(const FInputActionValue& Value);
+
+	void HandleFocus(float DeltaTime);
+
 	void StartRoll();
 	void EndsRoll();
+
+	void Tick(float DeltaTime) override;
 			
 
 protected:
@@ -90,5 +99,12 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void Respawn();
+
+	UPROPERTY(BlueprintReadWrite, Category = "Focus")
+	AActor* ActorFocus = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Focus")
+	float FocusInterpSpeed = 10.f;
+
 };
 
