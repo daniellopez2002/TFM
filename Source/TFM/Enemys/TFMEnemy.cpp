@@ -34,17 +34,17 @@ void ATFMEnemy::Tick(float DeltaTime)
 
 void ATFMEnemy::Patrol(float DeltaTime)
 {
-	// Vacío a propósito
+	// empty on purpose
 }
 
 void ATFMEnemy::Charge(float DeltaTime)
 {
-	// Vacío a propósito
+	// empty on purpose
 }
 
 void ATFMEnemy::Attack(float DeltaTime)
 {
-	// Vacío a propósito
+	// empty on purpose
 }
 
 void ATFMEnemy::ChangeState(EEnemyState NewState)
