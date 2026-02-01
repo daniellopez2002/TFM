@@ -23,6 +23,9 @@ class TFM_API ATFMEnemyBolt : public APawn
 public:
     ATFMEnemyBolt();
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    bool IsActivated = false;
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;

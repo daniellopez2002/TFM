@@ -39,6 +39,8 @@ void ATFMEnemyBolt::BeginPlay()
 void ATFMEnemyBolt::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    
+    if (!IsActivated) return;
 
     switch (CurrentState)
     {
