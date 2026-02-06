@@ -12,48 +12,73 @@ class TFM_API ATFMEnemyTermuk : public ATFMEnemy
 public:
 	ATFMEnemyTermuk();
 
-protected:
 	virtual void BeginPlay() override;
 
-	// ---- State overrides ----
+	// FSM overrides
 	virtual void Patrol(float DeltaTime) override;
 	virtual void Charge(float DeltaTime) override;
 	virtual void Attack(float DeltaTime) override;
-	virtual void ChangeState(EEnemyState NewState) override;
 
-	// ---- Detection & Attack ----
-	UPROPERTY(EditAnywhere, Category = "Termuk|Combat")
-	float AttackRange = 800.0f; // 8 meters
+protected:
 
-	UPROPERTY(EditAnywhere, Category = "Termuk|Combat")
-	float NailSpawnRadius = 200.0f; // 2 meters
+	// ---- Attack ranges ----
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float AttackRange = 600.f;
 
-	UPROPERTY(EditAnywhere, Category = "Termuk|Combat")
-	int32 NailsPerAttack = 5;
+	// ---- Angles ----
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+	float LaunchPitch = 45.f; // 
 
-	UPROPERTY(EditDefaultsOnly, Category = "Attack")
-	float NailSpawnHeight = 120.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Attack")
-	float NailForwardOffset = 50.f;
+	// ---- Charge ----
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float ChargeTime = 1.2f;
+
+	float ChargeTimer = 0.f;
 
 	// ---- Cooldown ----
-	UPROPERTY(EditAnywhere, Category = "Termuk|Combat")
-	float CooldownAfterAttack = 5.0f;
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float AttackCooldownMax = 3.f;
 
-	float CooldownTimer = 0.0f;
+	float AttackCooldown = 0.f;
 
-	// ---- References ----
-	UPROPERTY()
-	APawn* PlayerPawn;
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAttacking = false;
 
+	// ---- Projectiles ----
 
-	// Nail projectile class (Blueprint)
-	UPROPERTY(EditAnywhere, Category = "Termuk|Combat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	USceneComponent* NailSpawnPoint;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
 	TSubclassOf<AActor> NailProjectileClass;
 
-	// ---- Internal ----
-	bool bHasAttacked = false;
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	int32 NailsPerAttack = 5;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float NailSpawnRadius = 200.f;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float NailSpawnHeight = 120.f;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float NailForwardOffset = 100.f;
 
 	void SpawnNails();
+	void SpawnSingleNail();
+
+	// --- Nail Burst ---
+	UPROPERTY(EditAnywhere, Category = "Attack")
+	float TimeBetweenNails = 0.08f;
+
+	int32 NailsSpawned = 0;
+
+	FTimerHandle NailBurstTimer;
+
+
+public:
+	// AnimNotify
+	UFUNCTION(BlueprintCallable)
+	void OnAttackFinished();
 };

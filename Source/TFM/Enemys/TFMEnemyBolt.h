@@ -1,7 +1,6 @@
 #pragma once
-
-#include "CoreMinimal.h"
 #include "TFMEnemy.h"
+#include "CoreMinimal.h"
 #include "TFMEnemyBolt.generated.h"
 
 class UStaticMeshComponent;
@@ -37,18 +36,6 @@ protected:
 	UMaterialInstanceDynamic* DynamicMaterial;
 
 
-
-
-	// ---- Patrol ----
-	UPROPERTY(EditAnywhere)
-	TArray<AActor*> PatrolPoints;
-
-	int32 CurrentPatrolIndex;
-	FVector CurrentTarget;
-	float WaitTime = 0.0f;
-
-	UPROPERTY(EditAnywhere)
-	float PatrolSpeed = 200.0f;
 
 	// ---- Detection ----
 	UPROPERTY(EditAnywhere)

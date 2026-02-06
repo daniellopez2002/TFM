@@ -1,120 +1,159 @@
-#include "TFMEnemyTermuk.h"
+﻿#include "TFMEnemyTermuk.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 ATFMEnemyTermuk::ATFMEnemyTermuk()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	NailSpawnPoint = CreateDefaultSubobject<USceneComponent>(TEXT("NailSpawnPoint"));
+	NailSpawnPoint->SetupAttachment(RootComponent);
 }
+
 
 void ATFMEnemyTermuk::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+
 }
 
+// -------------------- PATROL --------------------
 void ATFMEnemyTermuk::Patrol(float DeltaTime)
 {
-	// Termuk stays still and guards an area
+	Super::Patrol(DeltaTime);
 
-	if (!PlayerPawn) return;
+	if (!PlayerPawn || AttackCooldown > 0.f)
+	{
+		AttackCooldown -= DeltaTime;
+		return;
+	}
 
-	float DistanceToPlayer =
+	float Distance =
 		FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
 
-	DrawDebugSphere(
+	/*DrawDebugSphere(
 		GetWorld(),
 		GetActorLocation(),
 		AttackRange,
 		16,
-		FColor::Red
-	);
+		FColor::Red,
+		false,
+		0.f
+	);*/
 
-	if (DistanceToPlayer <= AttackRange)
+	if (Distance <= AttackRange)
 	{
+		ChargeTimer = 0.f;
+		ChangeState(EEnemyState::Charge);
+	}
+}
+
+// -------------------- CHARGE --------------------
+void ATFMEnemyTermuk::Charge(float DeltaTime)
+{
+	Super::Charge(DeltaTime);
+	if (!PlayerPawn) return;
+
+	ChargeTimer += DeltaTime;
+
+
+	if (ChargeTimer >= ChargeTime)
+	{
+		ChargeTimer = 0.f;
+		bIsAttacking = true;
 		ChangeState(EEnemyState::Attack);
 	}
 }
 
+// -------------------- ATTACK --------------------
 void ATFMEnemyTermuk::Attack(float DeltaTime)
 {
-	if (bHasAttacked) return;
-
-	SpawnNails();
-	bHasAttacked = true;
-
-	ChangeState(EEnemyState::Charge);
+	Super::Attack(DeltaTime);
 }
 
-void ATFMEnemyTermuk::Charge(float DeltaTime)
-{
-	CooldownTimer += DeltaTime;
 
-	if (CooldownTimer >= CooldownAfterAttack)
-	{
-		CooldownTimer = 0.0f;
-		bHasAttacked = false;
-
-		ChangeState(EEnemyState::Patrol);
-	}
-}
-
-void ATFMEnemyTermuk::ChangeState(EEnemyState NewState)
-{
-	Super::ChangeState(NewState);
-
-	// Reset timers when entering cooldown
-	if (NewState == EEnemyState::Charge)
-	{
-		CooldownTimer = 0.0f;
-	}
-}
-
-void ATFMEnemyTermuk::SpawnNails()
+// -------------------- NAILS --------------------
+void ATFMEnemyTermuk::SpawnSingleNail()
 {
 	if (!NailProjectileClass || !PlayerPawn) return;
 
 	FVector PlayerLocation = PlayerPawn->GetActorLocation();
-	FVector EnemyLocation = GetActorLocation();
-	FVector Forward = GetActorForwardVector();
+	FVector SpawnLocation =
+		NailSpawnPoint
+		? NailSpawnPoint->GetComponentLocation()
+		: GetActorLocation();
 
-	for (int32 i = 0; i < NailsPerAttack; i++)
+	FVector RandomOffset = FMath::VRand();
+	RandomOffset.Z = 0.f;
+	RandomOffset.Normalize();
+	RandomOffset *= FMath::FRandRange(0.f, NailSpawnRadius);
+
+	FVector TargetLocation = PlayerLocation + RandomOffset;
+	FVector ToTarget = TargetLocation - SpawnLocation;
+
+	FRotator SpawnRotation = ToTarget.Rotation();
+	SpawnRotation.Pitch = LaunchPitch;
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AActor* Projectile = GetWorld()->SpawnActor<AActor>(
+		NailProjectileClass,
+		SpawnLocation,
+		SpawnRotation,
+		Params
+	);
+
+	if (Projectile)
 	{
-		// Random offset around player (target area)
-		FVector RandomOffset = FMath::VRand();
-		RandomOffset.Z = 0.f;
-		RandomOffset.Normalize();
-		RandomOffset *= FMath::FRandRange(0.f, NailSpawnRadius);
+		UProjectileMovementComponent* PMC =
+			Projectile->FindComponentByClass<UProjectileMovementComponent>();
 
-		FVector TargetLocation = PlayerLocation + RandomOffset;
-
-		// Spawn ABOVE and IN FRONT of Termuk
-		FVector SpawnLocation =
-			EnemyLocation +
-			FVector(0.f, 0.f, NailSpawnHeight) +
-			Forward * NailForwardOffset;
-
-		FRotator SpawnRotation =
-			(TargetLocation - SpawnLocation).Rotation();
-
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.Instigator = GetInstigator();
-		SpawnParams.SpawnCollisionHandlingOverride =
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		AActor* Nail = GetWorld()->SpawnActor<AActor>(
-			NailProjectileClass,
-			SpawnLocation,
-			SpawnRotation,
-			SpawnParams
-		);
-
-		if (Nail)
+		if (PMC)
 		{
-			Nail->SetLifeSpan(5.f);
+			PMC->Velocity = SpawnRotation.Vector() * PMC->InitialSpeed;
 		}
+	}
+
+	NailsSpawned++;
+
+	// ¿ya terminamos?
+	if (NailsSpawned >= NailsPerAttack)
+	{
+		GetWorldTimerManager().ClearTimer(NailBurstTimer);
 	}
 }
 
+
+
+void ATFMEnemyTermuk::SpawnNails()
+{
+	NailsSpawned = 0;
+
+	GetWorldTimerManager().SetTimer(
+		NailBurstTimer,
+		this,
+		&ATFMEnemyTermuk::SpawnSingleNail,
+		TimeBetweenNails,
+		true
+	);
+}
+
+
+
+// -------------------- ANIMATION CALLBACK --------------------
+void ATFMEnemyTermuk::OnAttackFinished()
+{
+	UE_LOG(LogTemp, Warning, TEXT("TERMUK ATTACK NOTIFY FIRED"));
+
+	SpawnNails();
+
+	bIsAttacking = false;
+	AttackCooldown = AttackCooldownMax;
+
+	ChangeState(EEnemyState::Patrol);
+}
