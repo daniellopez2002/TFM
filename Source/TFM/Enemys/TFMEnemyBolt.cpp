@@ -81,10 +81,14 @@ void ATFMEnemyBolt::Attack(float DeltaTime)
 	{
 		UpdateColor(FLinearColor::Blue);
 
+		FHitResult Hit;
 		SetActorLocation(
 			GetActorLocation() +
-			DashDirection * (DashDistance / DashDuration) * DeltaTime
+			DashDirection * (DashDistance / DashDuration) * DeltaTime,
+			true,   
+			&Hit
 		);
+
 	}
 	else
 	{
