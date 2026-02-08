@@ -76,6 +76,9 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
+		//Attack 
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ANutCharacter::Attack);
+
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANutCharacter::Move);
 
@@ -109,7 +112,7 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 	FRotator TaregtRot = DesiredDir.Rotation();
 	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
 
-	if (!ActorFocus)
+	if (ActorFocus.IsEmpty())
 	{
 		SetActorRotation(SmothRot);
 	}
@@ -133,8 +136,18 @@ void ANutCharacter::Look(const FInputActionValue& Value)
 
 void ANutCharacter::Attack(const FInputActionValue& Value)
 {
+	if (IsRolling)
+		return;
 
+	if (IsAttacking)
+	{
+		bComboInputQueued = true;
+		return;
+	}
+
+	StartCombo();
 }
+
 
 // God Mode Activation/Deactivation
 void ANutCharacter::ActivateGodMode()
@@ -178,11 +191,11 @@ void ANutCharacter::Respawn()
 
 void ANutCharacter::HandleFocus(float DeltaTime)
 {
-	if (!ActorFocus)
+	if (ActorFocus.IsEmpty())
 		return;
 
 	FVector ToTarget =
-		ActorFocus->GetActorLocation() - GetActorLocation();
+		ActorFocus[FocusIndex]->GetActorLocation() - GetActorLocation();
 
 	ToTarget.Z = 0.f;
 
@@ -201,8 +214,60 @@ void ANutCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!IsRolling && ActorFocus)
+	if (!IsRolling && !ActorFocus.IsEmpty())
 	{
 		HandleFocus(DeltaTime);
+	}
+}
+
+void ANutCharacter::StartCombo()
+{
+	if (IsAttacking || !AttackMontage)
+		return;
+
+	IsAttacking = true;
+	ComboIndex = 0;
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Play(AttackMontage);
+		AnimInstance->Montage_JumpToSection(TEXT("Attack_1"), AttackMontage);
+	}
+}
+
+void ANutCharacter::AdvanceCombo()
+{
+	if (!bComboInputQueued)
+	{
+		EndCombo();
+		return;
+	}
+
+	bComboInputQueued = false;
+	ComboIndex++;
+
+	if (ComboIndex >= MaxCombo)
+	{
+		EndCombo();
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance || !AttackMontage)
+		return;
+
+	FName SectionName = FName(*FString::Printf(TEXT("Attack_%d"), ComboIndex + 1));
+	AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
+}
+
+void ANutCharacter::EndCombo()
+{
+	IsAttacking = false;
+	bComboInputQueued = false;
+	ComboIndex = 0;
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Stop(0.15f, AttackMontage);
 	}
 }

@@ -101,10 +101,38 @@ public:
 	void Respawn();
 
 	UPROPERTY(BlueprintReadWrite, Category = "Focus")
-	AActor* ActorFocus = nullptr;
+	TArray<AActor*> ActorFocus;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Focus")
+	int FocusIndex = 0;
 
 	UPROPERTY(EditAnywhere, Category = "Focus")
 	float FocusInterpSpeed = 10.f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	bool IsAttacking = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bComboInputQueued = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	int32 ComboIndex = 0;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	int32 MaxCombo = 3;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* AttackMontage;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void StartCombo();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void AdvanceCombo();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EndCombo();
+
 
 };
 
