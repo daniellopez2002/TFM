@@ -47,6 +47,9 @@ class ANutCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AttackAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ChangeFocusAction;
+
 
 public:
 	ANutCharacter();
@@ -100,8 +103,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void Respawn();
 
+	UFUNCTION(BlueprintCallable)
+	void ChangeFocus(const FInputActionValue& Value);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveActorFromFocus(AActor* actor);
+
 	UPROPERTY(BlueprintReadWrite, Category = "Focus")
-	TArray<AActor*> ActorFocus;
+	TArray<AActor*> ActorsFocus;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Focus")
 	int FocusIndex = 0;
