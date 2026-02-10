@@ -5,6 +5,9 @@
 #include "Engine/TargetPoint.h"
 #include "TFMEnemy.generated.h"
 
+class UStaticMeshComponent;
+class UArrowComponent;
+
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
 {
@@ -31,6 +34,10 @@ public:
 protected:
 	UPROPERTY()
 	APawn* PlayerPawn;
+
+	UPROPERTY(VisibleAnywhere)
+	UArrowComponent* ArrowComp;
+
 
 	// ===== STATE MACHINE =====
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy")

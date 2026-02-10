@@ -50,7 +50,7 @@ void ATFMEnemy::Tick(float DeltaTime)
 void ATFMEnemy::RotateTowards(const FVector& TargetLocation, float DeltaTime)
 {
 	FVector Direction = TargetLocation - GetActorLocation();
-	Direction.Z = 0.f; // evita que mire hacia arriba/abajo
+	Direction.Z = 0.f; //look only at the front
 
 	if (Direction.IsNearlyZero()) return;
 
