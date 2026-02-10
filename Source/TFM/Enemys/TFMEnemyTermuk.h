@@ -21,9 +21,6 @@ public:
 
 protected:
 
-	// ---- components ---
-	UArrowComponent* ArrowComp;
-
 	// ---- Attack ranges ----
 	UPROPERTY(EditAnywhere, Category = "Attack")
 	float AttackRange = 600.f;

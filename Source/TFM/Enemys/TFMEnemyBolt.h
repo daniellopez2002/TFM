@@ -24,11 +24,12 @@ protected:
 	virtual void Attack(float DeltaTime) override;
 	virtual void ChangeState(EEnemyState NewState) override;
 
-	// ---- Components ----
+	// ---- Componentes ----
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* MeshComp;
 
 
+	UPROPERTY(VisibleAnywhere)
 	UArrowComponent* ArrowComp;
 
 	UPROPERTY()
@@ -59,5 +60,5 @@ protected:
 	FVector DashDirection;
 
 	// ---- Utils ----
-	void UpdateColor(FLinearColor NewColor); //changes the color depending on the bolt enemy state
+	void UpdateColor(FLinearColor NewColor);
 };

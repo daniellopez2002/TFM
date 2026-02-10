@@ -33,6 +33,16 @@ void ATFMEnemyTermuk::Patrol(float DeltaTime)
 	float Distance =
 		FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
 
+	/*DrawDebugSphere(
+		GetWorld(),
+		GetActorLocation(),
+		AttackRange,
+		16,
+		FColor::Red,
+		false,
+		0.f
+	);*/
+
 	if (Distance <= AttackRange)
 	{
 		ChargeTimer = 0.f;
