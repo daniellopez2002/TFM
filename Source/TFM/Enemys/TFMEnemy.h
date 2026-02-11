@@ -35,6 +35,7 @@ protected:
 	UPROPERTY()
 	APawn* PlayerPawn;
 
+	//arrow component
 	UPROPERTY(VisibleAnywhere)
 	UArrowComponent* ArrowComp;
 
