@@ -171,13 +171,12 @@ void ANutCharacter::DeactivateGodMode()
 // Rolling
 void ANutCharacter::StartRoll()
 {
-	IsRolling = true;
 	
 }
 
 void ANutCharacter::EndsRoll()
 {
-	IsRolling = false;
+	
 }
 
 // Checkpoint System

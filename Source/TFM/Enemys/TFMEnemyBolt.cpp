@@ -19,16 +19,6 @@ void ATFMEnemyBolt::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-
-	if (MeshComp && MeshComp->GetMaterial(0))
-	{
-		DynamicMaterial = UMaterialInstanceDynamic::Create(
-			MeshComp->GetMaterial(0), this);
-		MeshComp->SetMaterial(0, DynamicMaterial);
-	}
-
-<<<<<<< HEAD
     if (PatrolPoints.Num() > 0)
         CurrentTarget = PatrolPoints[CurrentPatrolIndex]->GetActorLocation();
 
@@ -83,9 +73,9 @@ void ATFMEnemyBolt::Tick(float DeltaTime)
             ChangeState(EEnemyState::Charge);
         }
     }
-=======
+
 	UpdateColor(FLinearColor::Yellow);
->>>>>>> main
+
 }
 
 void ATFMEnemyBolt::Patrol(float DeltaTime)
