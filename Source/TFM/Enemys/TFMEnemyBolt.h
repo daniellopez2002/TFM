@@ -1,87 +1,66 @@
 #pragma once
-
-#include "Engine/TargetPoint.h"
+#include "TFMEnemy.h"
 #include "CoreMinimal.h"
-#include "GameFramework/Pawn.h"
-#include "Components/ArrowComponent.h"
 #include "TFMEnemyBolt.generated.h"
 
-
-UENUM(BlueprintType)
-enum class EEnemyState : uint8
-{
-    Patrol,
-    Charge,
-    Attack
-};
+class UStaticMeshComponent;
+class UArrowComponent;
+class UMaterialInstanceDynamic;
 
 UCLASS()
-class TFM_API ATFMEnemyBolt : public APawn
+class TFM_API ATFMEnemyBolt : public ATFMEnemy
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    ATFMEnemyBolt();
+	ATFMEnemyBolt();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
     bool IsActivated = false;
 
 protected:
-    virtual void BeginPlay() override;
-    virtual void Tick(float DeltaTime) override;
+	virtual void BeginPlay() override;
 
-    //components
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyBolt|Components")
+	// ---- Overrides de estados ----
+	virtual void Patrol(float DeltaTime) override;
+	virtual void Charge(float DeltaTime) override;
+	virtual void Attack(float DeltaTime) override;
+	virtual void ChangeState(EEnemyState NewState) override;
+
+	// ---- Components ----
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* MeshComp;
+
+
 	UArrowComponent* ArrowComp;
 
-    // --- State ---
-    EEnemyState CurrentState;
+	UPROPERTY()
+	UMaterialInstanceDynamic* DynamicMaterial;
 
 
-    // --- Patrol ---
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Patrol")
-    TArray<ATargetPoint*> PatrolPoints;
 
-    int CurrentPatrolIndex;
-    FVector CurrentTarget;
+	// ---- Detection ----
+	UPROPERTY(EditAnywhere)
+	float DetectionRadius = 600.0f;
 
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Movement")
-    float PatrolSpeed = 300.0f; // 3 m/s (300 cm/s)
+	APawn* PlayerPawn;
 
-    float WaitTime = 0.0f;
+	// ---- Charge ----
+	UPROPERTY(EditAnywhere)
+	float ChargeTime = 1.5f;
 
-    // --- Player detection ---
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Detection")
-    float DetectionRadius = 500.0f; // 5 m = 500 cm
+	float ChargeTimer = 0.0f;
 
-    APawn* PlayerPawn;
+	// ---- Attack ----
+	UPROPERTY(EditAnywhere)
+	float DashDistance = 600.0f;
 
-    // --- Charge & Attack ---
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
-    float ChargeTime = 3.0f;
+	UPROPERTY(EditAnywhere)
+	float DashDuration = 0.3f;
 
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
-    float DashDistance = 500.0f;
+	float DashTimer = 0.0f;
+	FVector DashDirection;
 
-    UPROPERTY(EditAnywhere, Category = "EnemyBolt|Attack")
-    float DashDuration = 0.5f;
-
-    float ChargeTimer = 0.0f;
-    FVector DashDirection;
-    float DashTimer = 0.0f;
-
-    // --- Visuals ---
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Visual")
-    UStaticMeshComponent* MeshComp;
-
-    UMaterialInstanceDynamic* DynamicMaterial;
-
-    // --- Internal functions ---
-    void Patrol(float DeltaTime);
-    void Charge(float DeltaTime);
-    void Attack(float DeltaTime);
-    void ChangeState(EEnemyState NewState);
-
-    void UpdateColor(FLinearColor NewColor);
-
+	// ---- Utils ----
+	void UpdateColor(FLinearColor NewColor); //changes the color depending on the bolt enemy state
 };

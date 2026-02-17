@@ -1,26 +1,34 @@
-#include "TFMEnemyBolt.h"
-#include "Engine/TargetPoint.h"
+﻿#include "TFMEnemyBolt.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/ArrowComponent.h"
 
 ATFMEnemyBolt::ATFMEnemyBolt()
 {
-    PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true;
 
-    MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+	RootComponent = MeshComp;
+
 	ArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
-
+	ArrowComp->SetupAttachment(RootComponent);
 }
 
 void ATFMEnemyBolt::BeginPlay()
 {
-    Super::BeginPlay();
+	Super::BeginPlay();
 
+	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 
-    CurrentState = EEnemyState::Patrol;
-    CurrentPatrolIndex = 0;
+	if (MeshComp && MeshComp->GetMaterial(0))
+	{
+		DynamicMaterial = UMaterialInstanceDynamic::Create(
+			MeshComp->GetMaterial(0), this);
+		MeshComp->SetMaterial(0, DynamicMaterial);
+	}
 
+<<<<<<< HEAD
     if (PatrolPoints.Num() > 0)
         CurrentTarget = PatrolPoints[CurrentPatrolIndex]->GetActorLocation();
 
@@ -75,96 +83,102 @@ void ATFMEnemyBolt::Tick(float DeltaTime)
             ChangeState(EEnemyState::Charge);
         }
     }
+=======
+	UpdateColor(FLinearColor::Yellow);
+>>>>>>> main
 }
 
 void ATFMEnemyBolt::Patrol(float DeltaTime)
 {
-    if (PatrolPoints.Num() == 0) return;
+	//  Use base patrol movement
+	Super::Patrol(DeltaTime);
 
-    FVector Pos = GetActorLocation();
-    FVector Direction = (CurrentTarget - Pos).GetSafeNormal();
-    SetActorLocation(Pos + Direction * PatrolSpeed * DeltaTime);
+	//  Bolt-specific detection logic
+	if (!PlayerPawn) return;
 
-    if (FVector::Dist(Pos, CurrentTarget) < 50.0f)
-    {
-        WaitTime += DeltaTime;
-        if (WaitTime >= 2.0f)
-        {
-            CurrentPatrolIndex = (CurrentPatrolIndex + 1) % PatrolPoints.Num();
-            CurrentTarget = PatrolPoints[CurrentPatrolIndex]->GetActorLocation();
-            WaitTime = 0.0f;
-        }
-    }
+	float Distance =
+		FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
+
+	if (Distance < DetectionRadius)
+	{
+		ChangeState(EEnemyState::Charge);
+	}
 }
 
 void ATFMEnemyBolt::Charge(float DeltaTime)
 {
-    ChargeTimer += DeltaTime;
+	Super::Charge(DeltaTime);
+	ChargeTimer += DeltaTime;
 
-    if (ChargeTimer >= ChargeTime)
-    {
-        ChargeTimer = 0.0f;
-        if (PlayerPawn)
-        {
-            DashDirection = (PlayerPawn->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-            ChangeState(EEnemyState::Attack);
-        }
-    }
+	if (DynamicMaterial)
+	{
+		float Pulse =
+			(FMath::Sin(GetWorld()->GetTimeSeconds() * 8.f) + 1.f) * 0.5f;
+
+		UpdateColor(FLinearColor::LerpUsingHSV(
+			FLinearColor::White, FLinearColor::Red, Pulse));
+	}
+
+	if (ChargeTimer >= ChargeTime && PlayerPawn)
+	{
+		ChargeTimer = 0.f;
+		DashDirection =
+			(PlayerPawn->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+
+		ChangeState(EEnemyState::Attack);
+	}
 }
 
 void ATFMEnemyBolt::Attack(float DeltaTime)
 {
-    DashTimer += DeltaTime;
-    float Progress = DashTimer / DashDuration;
+	Super::Attack(DeltaTime);
+	DashTimer += DeltaTime;
 
-    if (Progress < 1.0f)
-    {
-        UpdateColor(FLinearColor::Blue);
-        FVector NewPos = GetActorLocation()
-            + DashDirection * (DashDistance / DashDuration) * DeltaTime;
-        SetActorLocation(NewPos);
-    }
-    else
-    {
-        DashTimer = 0.0f;
+	if (DashTimer < DashDuration)
+	{
+		UpdateColor(FLinearColor::Blue);
 
-        float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
-        if (Distance < DetectionRadius)
-            ChangeState(EEnemyState::Charge);
-        else
-            ChangeState(EEnemyState::Patrol);
-    }
+		FHitResult Hit;
+		SetActorLocation(
+			GetActorLocation() +
+			DashDirection * (DashDistance / DashDuration) * DeltaTime,
+			true,   
+			&Hit
+		);
+
+	}
+	else
+	{
+		DashTimer = 0.f;
+
+		float Distance =
+			FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
+
+		ChangeState(
+			Distance < DetectionRadius
+			? EEnemyState::Charge
+			: EEnemyState::Patrol
+		);
+	}
 }
-
 
 void ATFMEnemyBolt::ChangeState(EEnemyState NewState)
 {
-    CurrentState = NewState;
-    ChargeTimer = 0.0f;
-    DashTimer = 0.0f;
+	Super::ChangeState(NewState);
 
-    // Color para cada estado
-    switch (CurrentState)
-    {
-    case EEnemyState::Patrol:
-        UpdateColor(FLinearColor::Yellow);
-        break;
+	ChargeTimer = 0.f;
+	DashTimer = 0.f;
 
-    case EEnemyState::Charge:
-        // No seteamos color directamente, porque ya lo animamos en Tick
-        break;
-
-    case EEnemyState::Attack:
-        UpdateColor(FLinearColor::Blue);
-        break;
-    }
+	if (NewState == EEnemyState::Patrol)
+	{
+		UpdateColor(FLinearColor::Yellow);
+	}
 }
-
 
 void ATFMEnemyBolt::UpdateColor(FLinearColor NewColor)
 {
-    if (DynamicMaterial)
-    {
-        DynamicMaterial->SetVectorParameterValue("BaseColor", NewColor);
-    }
+	if (DynamicMaterial)
+	{
+		DynamicMaterial->SetVectorParameterValue("BaseColor", NewColor);
+	}
 }
