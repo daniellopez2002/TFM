@@ -176,7 +176,6 @@ void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 
 void ATFMBossGrabber::ActivateBossFight()
 {
-	printf("hello");
 	RestartAttackTimer();
 
 	if (BossHealthWidgetClass && !BossHealthWidget)
