@@ -2,12 +2,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/ActorComponent.h"
 #include "Components/BoxComponent.h"
+#include "Blueprint/UserWidget.h"
+
 
 
 
 ATFMBossGrabber::ATFMBossGrabber()
 {
+
+
+
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Root
@@ -26,29 +32,25 @@ ATFMBossGrabber::ATFMBossGrabber()
 	AttackHitbox->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AttackHitbox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-	/*AttackHitbox->OnComponentBeginOverlap.AddDynamic(
-		this,
-		&ATFMBossGrabber::OnHitboxOverlap
-	);*/
+
 }
 
 void ATFMBossGrabber::BeginPlay()
 {
 	Super::BeginPlay();
 
+
+	
+
+
 	CurrentState = EBossState::Idle;
 	CurrentAttack = EAttackType::None;
 
 	PlayerRef = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 
-	// start attack cycle
-	GetWorldTimerManager().SetTimer(
-		AttackTimer,
-		this,
-		&ATFMBossGrabber::ChooseRandomAttack,
-		3.f,
-		true
-	);
+
+	RestartAttackTimer();
+
 }
 
 void ATFMBossGrabber::Tick(float DeltaTime)
@@ -80,13 +82,75 @@ void ATFMBossGrabber::RotateTowardsPlayer(float DeltaTime)
 	SetActorRotation(NewRotation);
 }
 
+void ATFMBossGrabber::CheckPhaseTransition(int CurrentHealth) {
+
+		if (CurrentState == EBossState::Dead)
+			return;
+
+		if (CurrentHealth == 0) {
+			CurrentState = EBossState::Dead;
+			return;
+		}
+		float HealthPercent = (float)CurrentHealth / (float)MaxHealth;
+
+		// ===== PHASE 2 =====
+		if (CurrentPhase == 1 && HealthPercent <= Phase2Threshold)
+		{
+			CurrentPhase = 2;
+			CurrentAttackSpeedMultiplier = Phase2AttackSpeedMultiplier;
+
+			SetManualState(EBossState::Damaged);
+			RestartAttackTimer();
+		}
+
+		// ===== PHASE 3 =====
+		else if (CurrentPhase == 2 && HealthPercent <= Phase3Threshold)
+		{
+			CurrentPhase = 3;
+			CurrentAttackSpeedMultiplier = Phase3AttackSpeedMultiplier;
+
+			SetManualState(EBossState::Damaged);
+			RestartAttackTimer();
+		}
+
+		if (CurrentPhase == 3)
+		{
+			AttacksBeforePatrol = 3;
+		}
+		
+
+
+}
+
+
+void ATFMBossGrabber::RestartAttackTimer()
+{
+	GetWorldTimerManager().ClearTimer(AttackTimer);
+
+	GetWorldTimerManager().SetTimer(
+		AttackTimer,
+		this,
+		&ATFMBossGrabber::ChooseRandomAttack,
+		BaseAttackInterval / CurrentAttackSpeedMultiplier,
+		true
+	);
+}
+
+
 void ATFMBossGrabber::ChooseRandomAttack()
 {
-	if (CurrentState == EBossState::Dead ||
-		CurrentState == EBossState::Damaged)
+	if (CurrentState != EBossState::Idle)
 		return;
 
-	CurrentState = EBossState::Attacking;
+	// enough attacks - patrol
+	if (CurrentAttackCount >= AttacksBeforePatrol)
+	{
+		CurrentAttackCount = 0;
+		SetManualState(EBossState::Searching);
+		return;
+	}
+
+	SetManualState(EBossState::Attacking);
 
 	int32 Random = FMath::RandRange(0, 1);
 
@@ -95,7 +159,11 @@ void ATFMBossGrabber::ChooseRandomAttack()
 		: EAttackType::Sweep;
 
 	PerformAttack(SelectedAttack);
+
+	CurrentAttackCount++;
 }
+
+
 
 void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 {
@@ -104,6 +172,32 @@ void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 	// Only variable set
 	// The Animation Blueprint plays the animation
 
+}
+
+void ATFMBossGrabber::ActivateBossFight()
+{
+	printf("hello");
+	RestartAttackTimer();
+
+	if (BossHealthWidgetClass && !BossHealthWidget)
+	{
+		BossHealthWidget = CreateWidget<UUserWidget>(
+			GetWorld(),
+			BossHealthWidgetClass
+		);
+
+		if (BossHealthWidget)
+		{
+			BossHealthWidget->AddToViewport();
+		}
+	}
+}
+
+
+
+
+void ATFMBossGrabber::PLayerHit() {
+	bHasHitPlayer = true;
 }
 
 void ATFMBossGrabber::EnableHitbox()
@@ -126,6 +220,22 @@ void ATFMBossGrabber::OnAttackFinished()
 	}
 }
 
+void ATFMBossGrabber::OnPatrolFinished()
+{
+	if (CurrentState == EBossState::Searching)
+	{
+		SetManualState(EBossState::Idle);
+	}
+}
+
+void ATFMBossGrabber::OnPhaseTransitionFinished()
+{
+	if (CurrentState == EBossState::Damaged)
+	{
+		SetManualState(EBossState::Idle);
+	}
+}
+
 
 void ATFMBossGrabber::ResetToIdle()
 {
@@ -137,4 +247,16 @@ void ATFMBossGrabber::SetManualState(EBossState state)
 {
 	CurrentState = state;
 
+	// if damaged, pause states
+	if (state == EBossState::Damaged)
+	{
+		GetWorldTimerManager().PauseTimer(AttackTimer);
+	}
+
+	// if iddle, resume states
+	if (state == EBossState::Idle)
+	{
+		GetWorldTimerManager().UnPauseTimer(AttackTimer);
+	}
 }
+

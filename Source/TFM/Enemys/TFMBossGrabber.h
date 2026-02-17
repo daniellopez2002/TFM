@@ -3,8 +3,9 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "CoreMinimal.h"
-#include "TFMBossGrabber.generated.h"
+#include "Components/ActorComponent.h"
 
+#include "TFMBossGrabber.generated.h"
 
 
 	UENUM(BlueprintType)
@@ -68,21 +69,67 @@ private:
 	void ChooseRandomAttack();
 	void PerformAttack(EAttackType AttackType);
 	void ResetToIdle();
+	void RestartAttackTimer();
 
-	
 
-	/*UFUNCTION()
-	void OnHitboxOverlap(
-		UPrimitiveComponent* OverlappedComp,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex,
-		bool bFromSweep,
-		const FHitResult& SweepResult
-	);*/
+	// ================= UI =================
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UUserWidget> BossHealthWidgetClass;
+
+	UPROPERTY()
+	UUserWidget* BossHealthWidget;
+
+
+	// ================= PHASE SYSTEM =================
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Phases", meta = (AllowPrivateAccess = "true"))
+	int32 CurrentPhase = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	int32 MaxHealth = 100;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	float Phase2Threshold = 0.66f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	float Phase3Threshold = 0.33f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	float Phase2AttackSpeedMultiplier = 1.15f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	float Phase3AttackSpeedMultiplier = 1.30f;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Phases", meta = (AllowPrivateAccess = "true"))
+	float CurrentAttackSpeedMultiplier = 1.f;
+
+
+	// ================= ATTACK LOOP =================
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Combat")
+	float BaseAttackInterval = 3.f;
+
+	UPROPERTY(EditAnywhere, Category = "Boss|Combat")
+	int32 AttacksBeforePatrol = 2;
+
+	int32 CurrentAttackCount = 0;
+
+
+
 
 public:
+	UFUNCTION(BlueprintCallable)
+	void PLayerHit();
+	UFUNCTION(BlueprintCallable)
+	void ActivateBossFight();
+
+
 	// AnimNotify
+	UFUNCTION(BlueprintCallable)
+	void OnPatrolFinished();
+	UFUNCTION(BlueprintCallable)
+	void OnPhaseTransitionFinished();
 	UFUNCTION(BlueprintCallable)
 	void EnableHitbox();
 	UFUNCTION(BlueprintCallable)
@@ -91,4 +138,6 @@ public:
 	void OnAttackFinished();
 	UFUNCTION(BlueprintCallable)
 	void SetManualState(EBossState state);
+	UFUNCTION(BlueprintCallable)
+	void CheckPhaseTransition(int CurrentHealth);
 };
