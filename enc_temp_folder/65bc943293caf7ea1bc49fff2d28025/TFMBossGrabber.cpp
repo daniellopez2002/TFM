@@ -23,7 +23,7 @@ ATFMBossGrabber::ATFMBossGrabber()
 	BossMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BossMesh"));
 	BossMesh->SetupAttachment(RootComponent);
 
-	// Hitbox Attack
+	// Hitbox
 	AttackHitbox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackHitbox"));
 	AttackHitbox->SetupAttachment(BossMesh, TEXT("AttackSocket"));
 
@@ -32,15 +32,6 @@ ATFMBossGrabber::ATFMBossGrabber()
 	AttackHitbox->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AttackHitbox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-	//Hitbox Damage
-	DamageHitbox = CreateDefaultSubobject<UBoxComponent>(TEXT("DamageHitbox"));
-	DamageHitbox->SetupAttachment(BossMesh, TEXT("DamageSocket"));
-
-	DamageHitbox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	DamageHitbox->SetCollisionObjectType(ECC_WorldDynamic);
-	DamageHitbox->SetCollisionResponseToAllChannels(ECR_Ignore);
-	DamageHitbox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-	DamageHitbox->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
 
 }
 
@@ -48,9 +39,8 @@ void ATFMBossGrabber::BeginPlay()
 {
 	Super::BeginPlay();
 
-	IsBattleStarted = false;
 
-	HealthPercent = 1.0;
+	
 
 
 	CurrentState = EBossState::Idle;
@@ -92,21 +82,20 @@ void ATFMBossGrabber::RotateTowardsPlayer(float DeltaTime)
 	SetActorRotation(NewRotation);
 }
 
-void ATFMBossGrabber::CheckPhaseTransition(int CurrentHealth, int MaxHealth) {
+void ATFMBossGrabber::CheckPhaseTransition(int CurrentHealth) {
 
 		if (CurrentState == EBossState::Dead)
 			return;
 
 		if (CurrentHealth == 0) {
-			Death();
+			CurrentState = EBossState::Dead;
 			return;
 		}
-		HealthPercent = (float)CurrentHealth / (float)MaxHealth;
+		float HealthPercent = (float)CurrentHealth / (float)MaxHealth;
 
 		// ===== PHASE 2 =====
 		if (CurrentPhase == 1 && HealthPercent <= Phase2Threshold)
 		{
-			CurrentAttackCount = 0;
 			CurrentPhase = 2;
 			CurrentAttackSpeedMultiplier = Phase2AttackSpeedMultiplier;
 
@@ -117,7 +106,6 @@ void ATFMBossGrabber::CheckPhaseTransition(int CurrentHealth, int MaxHealth) {
 		// ===== PHASE 3 =====
 		else if (CurrentPhase == 2 && HealthPercent <= Phase3Threshold)
 		{
-			CurrentAttackCount = 0;
 			CurrentPhase = 3;
 			CurrentAttackSpeedMultiplier = Phase3AttackSpeedMultiplier;
 
@@ -129,8 +117,7 @@ void ATFMBossGrabber::CheckPhaseTransition(int CurrentHealth, int MaxHealth) {
 		{
 			AttacksBeforePatrol = 3;
 		}
-
-
+		
 
 
 }
@@ -155,10 +142,6 @@ void ATFMBossGrabber::ChooseRandomAttack()
 	if (CurrentState != EBossState::Idle)
 		return;
 
-	if (IsBattleStarted != true)
-		return;
-
-
 	// enough attacks - patrol
 	if (CurrentAttackCount >= AttacksBeforePatrol)
 	{
@@ -180,11 +163,7 @@ void ATFMBossGrabber::ChooseRandomAttack()
 	CurrentAttackCount++;
 }
 
-void ATFMBossGrabber::Death() {
-	CurrentState = EBossState::Dead;
-	HealthPercent = 0;
-	BossHealthWidget->RemoveFromViewport();
-}
+
 
 void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 {
@@ -195,9 +174,8 @@ void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 
 }
 
-void ATFMBossGrabber::ActivateBossFight_Implementation()
+void ATFMBossGrabber::ActivateBossFight()
 {
-	IsBattleStarted = true;
 	RestartAttackTimer();
 
 	if (BossHealthWidgetClass && !BossHealthWidget)
@@ -215,10 +193,6 @@ void ATFMBossGrabber::ActivateBossFight_Implementation()
 }
 
 
-float ATFMBossGrabber::GetHealthPercent() const
-{
-	return HealthPercent;
-}
 
 
 void ATFMBossGrabber::PLayerHit() {
@@ -247,7 +221,10 @@ void ATFMBossGrabber::OnAttackFinished()
 
 void ATFMBossGrabber::OnPatrolFinished()
 {
-	SetManualState(EBossState::Idle);
+	if (CurrentState == EBossState::Searching)
+	{
+		SetManualState(EBossState::Idle);
+	}
 }
 
 void ATFMBossGrabber::OnPhaseTransitionFinished()

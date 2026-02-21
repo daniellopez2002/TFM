@@ -45,18 +45,8 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	UBoxComponent* AttackHitbox;
 
-	UPROPERTY(VisibleAnywhere)
-	UBoxComponent* DamageHitbox;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bHasHitPlayer;
-
-	// ================= UI =================
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<class UUserWidget> BossHealthWidgetClass;
-
-	UPROPERTY(BlueprintReadOnly)
-	UUserWidget* BossHealthWidget;
 
 private:
 
@@ -71,12 +61,6 @@ private:
 	UPROPERTY()
 	APawn* PlayerRef;
 
-	UPROPERTY()
-	bool IsBattleStarted;
-
-	UPROPERTY(EditAnywhere, Category = "Boss|Health")
-	float HealthPercent;
-
 	// ===== TIME =====
 	FTimerHandle AttackTimer;
 
@@ -88,7 +72,12 @@ private:
 	void RestartAttackTimer();
 
 
+	// ================= UI =================
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UUserWidget> BossHealthWidgetClass;
 
+	UPROPERTY()
+	UUserWidget* BossHealthWidget;
 
 
 	// ================= PHASE SYSTEM =================
@@ -96,6 +85,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss|Phases", meta = (AllowPrivateAccess = "true"))
 	int32 CurrentPhase = 1;
 
+	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
+	int32 MaxHealth = 100;
 
 	UPROPERTY(EditAnywhere, Category = "Boss|Phases")
 	float Phase2Threshold = 0.66f;
@@ -130,13 +121,8 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	void PLayerHit();
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-	void ActivateBossFight();
-
 	UFUNCTION(BlueprintCallable)
-	float GetHealthPercent() const;
-
-	void Death();
+	void ActivateBossFight();
 
 
 	// AnimNotify
@@ -153,5 +139,5 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetManualState(EBossState state);
 	UFUNCTION(BlueprintCallable)
-	void CheckPhaseTransition(int CurrentHealth, int MaxHealth);
+	void CheckPhaseTransition(int CurrentHealth);
 };
