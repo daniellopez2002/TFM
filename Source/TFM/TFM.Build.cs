@@ -9,11 +9,12 @@ public class TFM : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] 
 		{ 
 			"Core", 
-			"CoreUObject", 
-			"Engine", 
-			"InputCore", 
+			"CoreUObject",
+			"Engine",
+			"InputCore",
 			"EnhancedInput",
-			"UMG"   // ← AGREGA ESTO
+			"UMG",
+			"Niagara" // <-- agrega esto
 		});
 	}
 }
