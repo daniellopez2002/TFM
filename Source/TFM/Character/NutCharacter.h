@@ -9,6 +9,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UNiagaraSystem;
 struct FInputActionValue;
 
 UCLASS(config=Game)
@@ -66,9 +67,12 @@ protected:
 	void Attack(const FInputActionValue& Value);
 
 	void HandleFocus(float DeltaTime);
+	
+	UFUNCTION(BlueprintCallable)
+	void Roll(const FInputActionValue& Value);
 
-	void StartRoll();
-	void EndsRoll();
+	void EndRoll();
+	void SpawnRollTrail(FVector Start, FVector End);
 
 	void Tick(float DeltaTime) override;
 			
@@ -91,6 +95,17 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool IsRolling;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool IsStuned = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	float StunedTimer = 2.5f;
+
+	float StunerCounter = 0.0f;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleStuned();
+
 	UFUNCTION(BlueprintCallable)
 	void ActivateGodMode();
 
@@ -100,8 +115,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCheckpoint(FVector location);
 	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void Respawn();
+
+	virtual void Respawn_Implementation();
 
 	UFUNCTION(BlueprintCallable)
 	void ChangeFocus(const FInputActionValue& Value);
@@ -142,6 +159,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void EndCombo();
 
+	// Roll
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float RollDistance = 600.f;
+
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float RollCooldown = 0.8f;
+
+	//UPROPERTY(EditAnywhere, Category = "Roll")
+	//UNiagaraSystem* RollTrailFX;
+
+	FTimerHandle RollTimerHandle;
 
 };
 

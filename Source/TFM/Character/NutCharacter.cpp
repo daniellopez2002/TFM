@@ -8,6 +8,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 ANutCharacter::ANutCharacter()
 {
@@ -86,7 +88,7 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANutCharacter::Look);
 
 		//Rolling
-		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::StartRoll);
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::Roll);
 
 		//Rolling
 		EnhancedInputComponent->BindAction(ChangeFocusAction, ETriggerEvent::Triggered, this, &ANutCharacter::ChangeFocus);
@@ -97,7 +99,7 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 // Movement Input
 void ANutCharacter::Move(const FInputActionValue& Value)
 {
-	if (IsRolling)
+	if (IsRolling || IsStuned)
 		return;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -115,12 +117,13 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 	FRotator TaregtRot = DesiredDir.Rotation();
 	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
 
-	if (ActorsFocus.IsEmpty())
+	if (ActorsFocus.IsEmpty() || IsAttacking)
 	{
 		SetActorRotation(SmothRot);
 	}
 
-	AddMovementInput(DesiredDir.GetSafeNormal());
+	if(!IsAttacking)
+		AddMovementInput(DesiredDir.GetSafeNormal());
 }
 
 
@@ -165,18 +168,84 @@ void ANutCharacter::DeactivateGodMode()
 	//This is gonna be called in animation notify
 	// Here we gonna deactivate god mode for the character to receive damage again
 	//
-	EndsRoll();
 }
 
 // Rolling
-void ANutCharacter::StartRoll()
+void ANutCharacter::Roll(const FInputActionValue& Value)
 {
-	
+	if (IsRolling || IsAttacking)
+		return;
+
+	IsRolling = true;
+
+	ActivateGodMode();
+
+	// Dirección forward (solo plano X/Y)
+	FVector Forward = GetActorForwardVector();
+	Forward.Z = 0.f;
+	Forward.Normalize();
+
+	FVector Start = GetActorLocation();
+	FVector Target = Start + Forward * RollDistance;
+
+	// --- TRACE PARA NO ATRAVESAR PAREDES ---
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->SweepSingleByChannel(
+		Hit,
+		Start,
+		Target,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeCapsule(
+			GetCapsuleComponent()->GetScaledCapsuleRadius(),
+			GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		),
+		Params
+	);
+
+	FVector FinalLocation = bHit ? Hit.Location : Target;
+
+	// TELEPORT
+	TeleportTo(FinalLocation, GetActorRotation(), false, true);
+
+	// SPAWN TRAIL
+	SpawnRollTrail(Start, FinalLocation);
+
+	// Cooldown
+	GetWorldTimerManager().SetTimer(
+		RollTimerHandle,
+		this,
+		&ANutCharacter::EndRoll,
+		RollCooldown,
+		false
+	);
 }
 
-void ANutCharacter::EndsRoll()
+void ANutCharacter::EndRoll()
 {
-	
+	IsRolling = false;
+	DeactivateGodMode();
+}
+
+void ANutCharacter::SpawnRollTrail(FVector Start, FVector End)
+{
+	/*if (!RollTrailFX)
+		return;
+
+	UNiagaraComponent* Niagara =
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			RollTrailFX,
+			Start
+		);
+
+	if (Niagara)
+	{
+		Niagara->SetVectorParameter("EndPoint", End);
+	}*/
 }
 
 // Checkpoint System
@@ -185,7 +254,7 @@ void ANutCharacter::SetCheckpoint(FVector location)
 	CheckpointLocation = location;
 }
 
-void ANutCharacter::Respawn()
+void ANutCharacter::Respawn_Implementation()
 {
 	// Teleport the character to the checkpoint location
 	SetActorLocation(CheckpointLocation);	
@@ -215,6 +284,16 @@ void ANutCharacter::HandleFocus(float DeltaTime)
 void ANutCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (IsStuned) {
+		StunerCounter++;
+		HandleStuned();
+		if (StunerCounter >= StunedTimer)
+		{
+			IsStuned = false;
+			StunerCounter = 0.0f;
+		}
+		return;
+	}
 
 	if (!IsRolling && !ActorsFocus.IsEmpty())
 	{
