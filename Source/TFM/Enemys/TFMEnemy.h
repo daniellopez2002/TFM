@@ -31,7 +31,28 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool IsStuned = false;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void Respawn();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void ReceiveAttack(FVector AttackDirection, float Force);
+
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector KnockbackVelocity;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bIsKnockedBack = false;
+
+	UPROPERTY(EditAnywhere, Category = "Knockback")
+	float KnockbackFriction = 6.f;
+
 protected:
+	FVector _originalPosition;
+
 	UPROPERTY()
 	APawn* PlayerPawn;
 

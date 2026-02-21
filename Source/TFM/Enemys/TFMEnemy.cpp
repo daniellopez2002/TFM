@@ -12,9 +12,9 @@ void ATFMEnemy::BeginPlay()
 	Super::BeginPlay();
 
 	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-
 	CurrentState = EEnemyState::Patrol;
 	LastLocation = GetActorLocation();
+	_originalPosition = GetActorLocation();
 
 	if (PatrolPoints.Num() > 0)
 	{
@@ -25,6 +25,29 @@ void ATFMEnemy::BeginPlay()
 void ATFMEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bIsKnockedBack)
+	{
+		AddActorWorldOffset(
+			KnockbackVelocity * DeltaTime,
+			true 
+		);
+
+		KnockbackVelocity = FMath::VInterpTo(
+			KnockbackVelocity,
+			FVector::ZeroVector,
+			DeltaTime,
+			KnockbackFriction
+		);
+
+		if (KnockbackVelocity.Size() < 10.f)
+		{
+			bIsKnockedBack = false;
+			IsStuned = false;
+		}
+
+		return;
+	}
 
 	FVector CurrentLocation = GetActorLocation();
 
@@ -111,4 +134,19 @@ void ATFMEnemy::Attack(float DeltaTime)
 void ATFMEnemy::ChangeState(EEnemyState NewState)
 {
 	CurrentState = NewState;
+}
+
+void ATFMEnemy::ReceiveAttack_Implementation(FVector AttackDirection, float Force)
+{
+	if (IsStuned)
+		return;
+
+	AttackDirection.Z = 0.f;
+
+	KnockbackVelocity =
+		AttackDirection.GetSafeNormal() * Force;
+
+	bIsKnockedBack = true;
+	IsStuned = true; 
+	ChangeState(EEnemyState::Patrol);
 }

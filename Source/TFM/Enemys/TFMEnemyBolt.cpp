@@ -19,16 +19,63 @@ void ATFMEnemyBolt::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if (PatrolPoints.Num() > 0)
+        CurrentTarget = PatrolPoints[CurrentPatrolIndex]->GetActorLocation();
 
-	if (MeshComp && MeshComp->GetMaterial(0))
-	{
-		DynamicMaterial = UMaterialInstanceDynamic::Create(
-			MeshComp->GetMaterial(0), this);
-		MeshComp->SetMaterial(0, DynamicMaterial);
-	}
+    PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+
+    if (MeshComp && MeshComp->GetMaterial(0))
+    {
+        DynamicMaterial = UMaterialInstanceDynamic::Create(MeshComp->GetMaterial(0), this);
+        MeshComp->SetMaterial(0, DynamicMaterial);
+    }
+
+    // Initial state yellow
+    UpdateColor(FLinearColor::Yellow);
+}
+
+void ATFMEnemyBolt::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    
+    if (!IsActivated) return;
+
+    switch (CurrentState)
+    {
+    case EEnemyState::Patrol:
+        Patrol(DeltaTime);
+        break;
+
+    case EEnemyState::Charge:
+        Charge(DeltaTime);
+
+        // Switch red and white
+        if (DynamicMaterial)
+        {
+            float Pulse = (FMath::Sin(GetWorld()->GetTimeSeconds() * 8.0f) + 1.0f) * 0.5f;
+            FLinearColor BlinkColor = FLinearColor::LerpUsingHSV(FLinearColor::White, FLinearColor::Red, Pulse);
+            UpdateColor(BlinkColor);
+        }
+        break;
+
+    case EEnemyState::Attack:
+        Attack(DeltaTime);
+        break;
+    }
+
+    DrawDebugSphere(GetWorld(), GetActorLocation(), DetectionRadius, 16, FColor::Yellow);
+
+    if (PlayerPawn)
+    {
+        float Distance = FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
+        if (Distance < DetectionRadius && CurrentState == EEnemyState::Patrol)
+        {
+            ChangeState(EEnemyState::Charge);
+        }
+    }
 
 	UpdateColor(FLinearColor::Yellow);
+
 }
 
 void ATFMEnemyBolt::Patrol(float DeltaTime)

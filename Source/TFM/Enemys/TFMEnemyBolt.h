@@ -13,11 +13,15 @@ class TFM_API ATFMEnemyBolt : public ATFMEnemy
 	GENERATED_BODY()
 
 public:
+	virtual void Tick(float DeltaTime) override;
 	ATFMEnemyBolt();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    bool IsActivated = false;
 
 protected:
 	virtual void BeginPlay() override;
-
+	
 	// ---- Overrides de estados ----
 	virtual void Patrol(float DeltaTime) override;
 	virtual void Charge(float DeltaTime) override;
