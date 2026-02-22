@@ -8,6 +8,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 ANutCharacter::ANutCharacter()
 {
@@ -76,6 +78,9 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
+		//Attack 
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ANutCharacter::Attack);
+
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANutCharacter::Move);
 
@@ -83,7 +88,10 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANutCharacter::Look);
 
 		//Rolling
-		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::StartRoll);
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &ANutCharacter::Roll);
+
+		//Rolling
+		EnhancedInputComponent->BindAction(ChangeFocusAction, ETriggerEvent::Triggered, this, &ANutCharacter::ChangeFocus);
 		//EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Completed, this, &ANutCharacter::EndsRoll);
 	}
 }
@@ -91,7 +99,7 @@ void ANutCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 // Movement Input
 void ANutCharacter::Move(const FInputActionValue& Value)
 {
-	if (IsRolling)
+	if (IsRolling || IsStuned)
 		return;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -109,9 +117,13 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 	FRotator TaregtRot = DesiredDir.Rotation();
 	FRotator SmothRot = FMath::RInterpTo(GetActorRotation(), TaregtRot, GetWorld()->GetDeltaSeconds(), 15.f);	
 
-	SetActorRotation(SmothRot);
+	if (ActorsFocus.IsEmpty() || IsAttacking)
+	{
+		SetActorRotation(SmothRot);
+	}
 
-	AddMovementInput(DesiredDir.GetSafeNormal());
+	if(!IsAttacking)
+		AddMovementInput(DesiredDir.GetSafeNormal());
 }
 
 
@@ -128,6 +140,21 @@ void ANutCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void ANutCharacter::Attack(const FInputActionValue& Value)
+{
+	if (IsRolling)
+		return;
+
+	if (IsAttacking)
+	{
+		bComboInputQueued = true;
+		return;
+	}
+
+	StartCombo();
+}
+
+
 // God Mode Activation/Deactivation
 void ANutCharacter::ActivateGodMode()
 {
@@ -141,19 +168,84 @@ void ANutCharacter::DeactivateGodMode()
 	//This is gonna be called in animation notify
 	// Here we gonna deactivate god mode for the character to receive damage again
 	//
-	EndsRoll();
 }
 
 // Rolling
-void ANutCharacter::StartRoll()
+void ANutCharacter::Roll(const FInputActionValue& Value)
 {
+	if (IsRolling || IsAttacking)
+		return;
+
 	IsRolling = true;
-	
+
+	ActivateGodMode();
+
+	// Dirección forward (solo plano X/Y)
+	FVector Forward = GetActorForwardVector();
+	Forward.Z = 0.f;
+	Forward.Normalize();
+
+	FVector Start = GetActorLocation();
+	FVector Target = Start + Forward * RollDistance;
+
+	// --- TRACE PARA NO ATRAVESAR PAREDES ---
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->SweepSingleByChannel(
+		Hit,
+		Start,
+		Target,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeCapsule(
+			GetCapsuleComponent()->GetScaledCapsuleRadius(),
+			GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
+		),
+		Params
+	);
+
+	FVector FinalLocation = bHit ? Hit.Location : Target;
+
+	// TELEPORT
+	TeleportTo(FinalLocation, GetActorRotation(), false, true);
+
+	// SPAWN TRAIL
+	SpawnRollTrail(Start, FinalLocation);
+
+	// Cooldown
+	GetWorldTimerManager().SetTimer(
+		RollTimerHandle,
+		this,
+		&ANutCharacter::EndRoll,
+		RollCooldown,
+		false
+	);
 }
 
-void ANutCharacter::EndsRoll()
+void ANutCharacter::EndRoll()
 {
 	IsRolling = false;
+	DeactivateGodMode();
+}
+
+void ANutCharacter::SpawnRollTrail(FVector Start, FVector End)
+{
+	/*if (!RollTrailFX)
+		return;
+
+	UNiagaraComponent* Niagara =
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			RollTrailFX,
+			Start
+		);
+
+	if (Niagara)
+	{
+		Niagara->SetVectorParameter("EndPoint", End);
+	}*/
 }
 
 // Checkpoint System
@@ -162,8 +254,149 @@ void ANutCharacter::SetCheckpoint(FVector location)
 	CheckpointLocation = location;
 }
 
-void ANutCharacter::Respawn()
+void ANutCharacter::Respawn_Implementation()
 {
 	// Teleport the character to the checkpoint location
 	SetActorLocation(CheckpointLocation);	
+}
+
+void ANutCharacter::HandleFocus(float DeltaTime)
+{
+	if (ActorsFocus.IsEmpty())
+		return;
+
+	FVector ToTarget =
+		ActorsFocus[FocusIndex]->GetActorLocation() - GetActorLocation();
+
+	ToTarget.Z = 0.f;
+
+	FRotator TargetRot = ToTarget.Rotation();
+	FRotator NewRot = FMath::RInterpTo(
+		GetActorRotation(),
+		TargetRot,
+		DeltaTime,
+		FocusInterpSpeed
+	);
+
+	SetActorRotation(NewRot);
+}
+
+void ANutCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	if (IsStuned) {
+		StunerCounter++;
+		HandleStuned();
+		if (StunerCounter >= StunedTimer)
+		{
+			IsStuned = false;
+			StunerCounter = 0.0f;
+		}
+		return;
+	}
+
+	if (!IsRolling && !ActorsFocus.IsEmpty())
+	{
+		HandleFocus(DeltaTime);
+	}
+}
+
+void ANutCharacter::StartCombo()
+{
+	if (IsAttacking || !AttackMontage)
+		return;
+
+	IsAttacking = true;
+	ComboIndex = 0;
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Play(AttackMontage);
+		AnimInstance->Montage_JumpToSection(TEXT("Attack_1"), AttackMontage);
+	}
+}
+
+void ANutCharacter::AdvanceCombo()
+{
+	if (!bComboInputQueued)
+	{
+		EndCombo();
+		return;
+	}
+
+	bComboInputQueued = false;
+	ComboIndex++;
+
+	if (ComboIndex >= MaxCombo)
+	{
+		EndCombo();
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance || !AttackMontage)
+		return;
+
+	FName SectionName = FName(*FString::Printf(TEXT("Attack_%d"), ComboIndex + 1));
+	AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
+}
+
+void ANutCharacter::EndCombo()
+{
+	IsAttacking = false;
+	bComboInputQueued = false;
+	ComboIndex = 0;
+
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Stop(0.15f, AttackMontage);
+	}
+}
+
+void ANutCharacter::RemoveActorFromFocus(AActor* actor)
+{
+	if (!ActorsFocus.Contains(actor))
+		return;
+
+	ActorsFocus.Remove(actor);
+	FocusIndex = 0;
+}
+
+void ANutCharacter::ChangeFocus(const FInputActionValue& Value)
+{
+
+	if (ActorsFocus.IsEmpty())
+	{
+		FocusIndex = 0;
+		return;
+	}
+
+	float Input = Value.Get<float>();
+
+	if (Input > 0.f)
+	{
+		int32 Target = FocusIndex + 1;
+
+		if (Target >= ActorsFocus.Num())
+		{
+			FocusIndex = 0;
+		}
+		else
+		{
+			FocusIndex = Target;
+		}
+	}
+	else if (Input < 0.f)
+	{
+		int32 Target = FocusIndex - 1;
+
+		if (Target < 0)
+		{
+			FocusIndex = ActorsFocus.Num() - 1;
+		}
+		else
+		{
+			FocusIndex = Target;
+		}
+	}
 }

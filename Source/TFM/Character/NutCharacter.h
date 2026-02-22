@@ -9,6 +9,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UNiagaraSystem;
 struct FInputActionValue;
 
 UCLASS(config=Game)
@@ -44,6 +45,12 @@ class ANutCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* RollAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ChangeFocusAction;
+
 
 public:
 	ANutCharacter();
@@ -57,8 +64,17 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	void StartRoll();
-	void EndsRoll();
+	void Attack(const FInputActionValue& Value);
+
+	void HandleFocus(float DeltaTime);
+	
+	UFUNCTION(BlueprintCallable)
+	void Roll(const FInputActionValue& Value);
+
+	void EndRoll();
+	void SpawnRollTrail(FVector Start, FVector End);
+
+	void Tick(float DeltaTime) override;
 			
 
 protected:
@@ -79,6 +95,17 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool IsRolling;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool IsStuned = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	float StunedTimer = 2.5f;
+
+	float StunerCounter = 0.0f;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void HandleStuned();
+
 	UFUNCTION(BlueprintCallable)
 	void ActivateGodMode();
 
@@ -88,7 +115,61 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCheckpoint(FVector location);
 	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void Respawn();
+
+	virtual void Respawn_Implementation();
+
+	UFUNCTION(BlueprintCallable)
+	void ChangeFocus(const FInputActionValue& Value);
+
+	UFUNCTION(BlueprintCallable)
+	void RemoveActorFromFocus(AActor* actor);
+
+	UPROPERTY(BlueprintReadWrite, Category = "Focus")
+	TArray<AActor*> ActorsFocus;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Focus")
+	int FocusIndex = 0;
+
+	UPROPERTY(EditAnywhere, Category = "Focus")
+	float FocusInterpSpeed = 10.f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	bool IsAttacking = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bComboInputQueued = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	int32 ComboIndex = 0;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	int32 MaxCombo = 3;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat")
+	UAnimMontage* AttackMontage;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void StartCombo();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void AdvanceCombo();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EndCombo();
+
+	// Roll
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float RollDistance = 600.f;
+
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float RollCooldown = 0.8f;
+
+	//UPROPERTY(EditAnywhere, Category = "Roll")
+	//UNiagaraSystem* RollTrailFX;
+
+	FTimerHandle RollTimerHandle;
+
 };
 
