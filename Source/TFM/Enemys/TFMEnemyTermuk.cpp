@@ -111,7 +111,7 @@ void ATFMEnemyTermuk::SpawnSingleNail()
 
 	NailsSpawned++;
 
-	// ¿ya terminamos?
+	// finished nails spawn
 	if (NailsSpawned >= NailsPerAttack)
 	{
 		GetWorldTimerManager().ClearTimer(NailBurstTimer);
