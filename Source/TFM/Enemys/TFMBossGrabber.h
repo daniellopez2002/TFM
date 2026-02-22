@@ -1,11 +1,13 @@
 #pragma once
-
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
+#include "GameFramework/Pawn.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-
 #include "TFMBossGrabber.generated.h"
+
 
 
 	UENUM(BlueprintType)
@@ -45,11 +47,25 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	UBoxComponent* AttackHitbox;
 
-	UPROPERTY(VisibleAnywhere)
-	UBoxComponent* DamageHitbox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bHasHitPlayer;
+
+	//================= SOUND =================
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Audio")
+	UAudioComponent* StateAudioComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* PatrolSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* AttackSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* DamageSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	USoundBase* DeathSound;
 
 	// ================= UI =================
 	UPROPERTY(EditAnywhere, Category = "UI")
@@ -86,8 +102,9 @@ private:
 	void PerformAttack(EAttackType AttackType);
 	void ResetToIdle();
 	void RestartAttackTimer();
+	void UpdateStateAudio();
 
-
+	
 
 
 
@@ -128,6 +145,8 @@ private:
 
 
 public:
+	UFUNCTION()
+	void OnStateSoundFinished();
 	UFUNCTION(BlueprintCallable)
 	void PLayerHit();
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)

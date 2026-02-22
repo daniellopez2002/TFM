@@ -5,6 +5,8 @@
 #include "Components/ActorComponent.h"
 #include "Components/BoxComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 
 
@@ -32,15 +34,10 @@ ATFMBossGrabber::ATFMBossGrabber()
 	AttackHitbox->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AttackHitbox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-	//Hitbox Damage
-	DamageHitbox = CreateDefaultSubobject<UBoxComponent>(TEXT("DamageHitbox"));
-	DamageHitbox->SetupAttachment(BossMesh, TEXT("DamageSocket"));
-
-	DamageHitbox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	DamageHitbox->SetCollisionObjectType(ECC_WorldDynamic);
-	DamageHitbox->SetCollisionResponseToAllChannels(ECR_Ignore);
-	DamageHitbox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
-	DamageHitbox->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+	StateAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("StateAudio"));
+	StateAudioComponent->SetupAttachment(RootComponent);
+	StateAudioComponent->bAutoActivate = false;
+	StateAudioComponent->OnAudioFinished.AddDynamic(this, &ATFMBossGrabber::OnStateSoundFinished);
 
 }
 
@@ -198,6 +195,7 @@ void ATFMBossGrabber::PerformAttack(EAttackType AttackType)
 void ATFMBossGrabber::ActivateBossFight_Implementation()
 {
 	IsBattleStarted = true;
+	UpdateStateAudio();
 	RestartAttackTimer();
 
 	if (BossHealthWidgetClass && !BossHealthWidget)
@@ -214,6 +212,48 @@ void ATFMBossGrabber::ActivateBossFight_Implementation()
 	}
 }
 
+void ATFMBossGrabber::UpdateStateAudio()
+{
+	if (!StateAudioComponent) return;
+
+	USoundBase* NewSound = nullptr;
+
+	switch (CurrentState)
+	{
+	case EBossState::Idle:
+		NewSound = PatrolSound;
+		break;
+	case EBossState::Searching:
+		NewSound = PatrolSound;
+		break;
+
+	case EBossState::Attacking:
+		NewSound = AttackSound;
+		break;
+
+	case EBossState::Damaged:
+		NewSound = DamageSound;
+		break;
+
+	case EBossState::Dead:
+		NewSound = DeathSound;
+		break;
+	}
+
+	if (NewSound)
+	{
+		StateAudioComponent->SetSound(NewSound);
+		StateAudioComponent->Play();
+	}
+}
+
+void ATFMBossGrabber::OnStateSoundFinished()
+{
+	if (CurrentState == EBossState::Dead)
+		return;
+
+	UpdateStateAudio(); // vuelve a elegir sonido según estado
+}
 
 float ATFMBossGrabber::GetHealthPercent() const
 {
@@ -269,13 +309,13 @@ void ATFMBossGrabber::SetManualState(EBossState state)
 {
 	CurrentState = state;
 
-	// if damaged, pause states
+	UpdateStateAudio(); 
+
 	if (state == EBossState::Damaged)
 	{
 		GetWorldTimerManager().PauseTimer(AttackTimer);
 	}
 
-	// if iddle, resume states
 	if (state == EBossState::Idle)
 	{
 		GetWorldTimerManager().UnPauseTimer(AttackTimer);
