@@ -7,6 +7,7 @@
 
 class UStaticMeshComponent;
 class UArrowComponent;
+class UAudioComponent;
 
 UENUM(BlueprintType)
 enum class EEnemyState : uint8
@@ -60,6 +61,9 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	UArrowComponent* ArrowComp;
 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UAudioComponent* AudioComp;
 
 	// ===== STATE MACHINE =====
 	UPROPERTY(BlueprintReadOnly, Category = "Enemy")

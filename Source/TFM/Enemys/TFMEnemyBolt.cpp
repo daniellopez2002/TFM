@@ -9,7 +9,7 @@ ATFMEnemyBolt::ATFMEnemyBolt()
 	PrimaryActorTick.bCanEverTick = true;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
-	RootComponent = MeshComp;
+	MeshComp->SetupAttachment(RootComponent);
 
 	ArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 	ArrowComp->SetupAttachment(RootComponent);
