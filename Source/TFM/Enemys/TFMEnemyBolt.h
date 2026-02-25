@@ -62,6 +62,9 @@ protected:
 	float DashTimer = 0.0f;
 	FVector DashDirection;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool ImpactAttack = false;
+
 	// ---- Utils ----
 	void UpdateColor(FLinearColor NewColor); //changes the color depending on the bolt enemy state
 };

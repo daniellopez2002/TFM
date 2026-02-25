@@ -67,6 +67,14 @@ void ATFMEnemy::Tick(float DeltaTime)
 	case EEnemyState::Attack:
 		Attack(DeltaTime);
 		break;
+	case EEnemyState::Stunned:
+		// Mientras está aturdido no se mueve ni rota
+		StunTimer -= DeltaTime;
+		if (StunTimer <= 0.f)
+		{
+			ChangeState(_lastState);
+		}
+		break;
 	}
 }
 
@@ -133,12 +141,13 @@ void ATFMEnemy::Attack(float DeltaTime)
 
 void ATFMEnemy::ChangeState(EEnemyState NewState)
 {
+	_lastState = CurrentState;
 	CurrentState = NewState;
 }
 
 void ATFMEnemy::ReceiveAttack_Implementation(FVector AttackDirection, float Force)
 {
-	if (IsStuned)
+	if (CurrentState == EEnemyState::Stunned)
 		return;
 
 	AttackDirection.Z = 0.f;
@@ -148,5 +157,5 @@ void ATFMEnemy::ReceiveAttack_Implementation(FVector AttackDirection, float Forc
 
 	bIsKnockedBack = true;
 	IsStuned = true; 
-	ChangeState(EEnemyState::Patrol);
+	ChangeState(EEnemyState::Stunned);
 }
