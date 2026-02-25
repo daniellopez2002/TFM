@@ -168,10 +168,6 @@ void ATFMEnemyBolt::ChangeState(EEnemyState NewState)
 	{
 		UpdateColor(FLinearColor::Yellow);
 	}
-	else
-	{
-		UpdateColor(FLinearColor::Red);
-	}
 }
 
 void ATFMEnemyBolt::UpdateColor(FLinearColor NewColor)
