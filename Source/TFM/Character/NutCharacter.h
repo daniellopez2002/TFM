@@ -84,6 +84,14 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
+	/** Duración del dash en segundos */
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float RollDuration = 0.3f;
+
+	// Variables internas para el movimiento progresivo
+	FVector DashDirection;
+	float DistanceTraveled;
+	bool bDashFinished;
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/

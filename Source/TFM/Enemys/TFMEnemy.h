@@ -14,7 +14,8 @@ enum class EEnemyState : uint8
 {
 	Patrol,
 	Charge,
-	Attack
+	Attack,
+	Stunned
 };
 
 UCLASS()
@@ -28,6 +29,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	void RotateTowards(const FVector& TargetLocation, float DeltaTime);
+	float StunTimer;
+	EEnemyState _lastState;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -41,6 +44,8 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void ReceiveAttack(FVector AttackDirection, float Force);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stun")
+	float StunDuration = 2.0f;   
 
 	UPROPERTY(BlueprintReadWrite)
 	FVector KnockbackVelocity;

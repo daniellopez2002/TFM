@@ -177,51 +177,20 @@ void ANutCharacter::Roll(const FInputActionValue& Value)
 		return;
 
 	IsRolling = true;
-
 	ActivateGodMode();
 
-	// Dirección forward (solo plano X/Y)
+	// Dirección del dash (forward del personaje, solo plano horizontal)
 	FVector Forward = GetActorForwardVector();
 	Forward.Z = 0.f;
 	Forward.Normalize();
 
-	FVector Start = GetActorLocation();
-	FVector Target = Start + Forward * RollDistance;
+	// Configuración del dash
+	DashDirection = Forward;
+	DistanceTraveled = 0.f;
+	bDashFinished = false;
 
-	// --- TRACE PARA NO ATRAVESAR PAREDES ---
-	FHitResult Hit;
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
-
-	bool bHit = GetWorld()->SweepSingleByChannel(
-		Hit,
-		Start,
-		Target,
-		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(
-			GetCapsuleComponent()->GetScaledCapsuleRadius(),
-			GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
-		),
-		Params
-	);
-
-	FVector FinalLocation = bHit ? Hit.Location : Target;
-
-	// TELEPORT
-	TeleportTo(FinalLocation, GetActorRotation(), false, true);
-
-	// SPAWN TRAIL
-	SpawnRollTrail(Start, FinalLocation);
-
-	// Cooldown
-	GetWorldTimerManager().SetTimer(
-		RollTimerHandle,
-		this,
-		&ANutCharacter::EndRoll,
-		RollCooldown,
-		false
-	);
+	// (Opcional) Aquí podrías spawnear un efecto de partícula que siga al personaje
+	// SpawnRollTrail(GetActorLocation(), GetActorLocation() + Forward * RollDistance);
 }
 
 void ANutCharacter::EndRoll()
@@ -293,6 +262,39 @@ void ANutCharacter::Tick(float DeltaTime)
 			StunerCounter = 0.0f;
 		}
 		return;
+	}
+
+	// --- Movimiento suave del dash ---
+	if (IsRolling && !bDashFinished)
+	{
+		// Velocidad del dash = distancia total / duración
+		float DashSpeed = RollDistance / RollDuration;
+		float Step = DashSpeed * DeltaTime;
+
+		FVector DesiredMovement = DashDirection * Step;
+		FHitResult Hit;
+
+		// Movemos con detección de colisión (sweep)
+		AddActorWorldOffset(DesiredMovement, true, &Hit);
+
+		// Actualizamos la distancia realmente recorrida (puede ser menor si chocó)
+		float RealStep = Hit.bBlockingHit ? Hit.Distance : Step;
+		DistanceTraveled += RealStep;
+
+		// Si chocamos o alcanzamos la distancia máxima, finalizamos el dash
+		if (Hit.bBlockingHit || DistanceTraveled >= RollDistance)
+		{
+			bDashFinished = true;
+
+			// Iniciamos el cooldown (tiempo de recuperación)
+			GetWorldTimerManager().SetTimer(
+				RollTimerHandle,
+				this,
+				&ANutCharacter::EndRoll,
+				RollCooldown,
+				false
+			);
+		}
 	}
 
 	if (!IsRolling && !ActorsFocus.IsEmpty())
