@@ -121,6 +121,11 @@ void ATFMEnemyBolt::Charge(float DeltaTime)
 
 void ATFMEnemyBolt::Attack(float DeltaTime)
 {
+	if (ImpactAttack) {
+		ChangeState(EEnemyState::Charge);
+		return;
+	}
+
 	Super::Attack(DeltaTime);
 	DashTimer += DeltaTime;
 
