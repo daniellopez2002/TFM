@@ -215,6 +215,7 @@ void ATFMBossGrabber::ActivateBossFight_Implementation()
 void ATFMBossGrabber::UpdateStateAudio()
 {
 	if (!StateAudioComponent) return;
+	if (IsBattleStarted == false) return;
 
 	USoundBase* NewSound = nullptr;
 
