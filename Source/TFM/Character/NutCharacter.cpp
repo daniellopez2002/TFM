@@ -122,8 +122,14 @@ void ANutCharacter::Move(const FInputActionValue& Value)
 		SetActorRotation(SmothRot);
 	}
 
-	if(!IsAttacking)
-		AddMovementInput(DesiredDir.GetSafeNormal());
+	float MoveMultiplier = 1.0f;
+
+	if (IsAttacking)
+	{
+		MoveMultiplier = 0.4f; 
+	}
+
+	AddMovementInput(DesiredDir.GetSafeNormal(), MoveMultiplier);
 }
 
 
@@ -173,30 +179,57 @@ void ANutCharacter::DeactivateGodMode()
 // Rolling
 void ANutCharacter::Roll(const FInputActionValue& Value)
 {
-	if (IsRolling || IsAttacking)
+	if (IsRolling || IsAttacking || bRollOnCooldown || !CheckEnergy(Energy))
 		return;
 
 	IsRolling = true;
 	ActivateGodMode();
-
-	// Dirección del dash (forward del personaje, solo plano horizontal)
+	OnRoll();
+	// Dirección del dash
 	FVector Forward = GetActorForwardVector();
 	Forward.Z = 0.f;
 	Forward.Normalize();
 
-	// Configuración del dash
 	DashDirection = Forward;
 	DistanceTraveled = 0.f;
 	bDashFinished = false;
-
-	// (Opcional) Aquí podrías spawnear un efecto de partícula que siga al personaje
-	// SpawnRollTrail(GetActorLocation(), GetActorLocation() + Forward * RollDistance);
 }
+
+bool ANutCharacter::CheckEnergy(float nrg) {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			5.f,
+			FColor::Green,
+			FString::Printf(TEXT("Energia: %f"), Energy)
+		);
+	}
+	if (Energy > 100) {
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void ANutCharacter::SetEnergy(float nrg) {
+	Energy = nrg;
+
+}
+
 
 void ANutCharacter::EndRoll()
 {
 	IsRolling = false;
+	bDashFinished = true;
 	DeactivateGodMode();
+}
+
+void ANutCharacter::ResetRollCooldown()
+{
+	bRollOnCooldown = false;
 }
 
 void ANutCharacter::SpawnRollTrail(FVector Start, FVector End)
@@ -287,10 +320,14 @@ void ANutCharacter::Tick(float DeltaTime)
 			bDashFinished = true;
 
 			// Iniciamos el cooldown (tiempo de recuperación)
+			EndRoll();
+
+			bRollOnCooldown = true;
+
 			GetWorldTimerManager().SetTimer(
-				RollTimerHandle,
+				RollCooldownHandle,
 				this,
-				&ANutCharacter::EndRoll,
+				&ANutCharacter::ResetRollCooldown,
 				RollCooldown,
 				false
 			);

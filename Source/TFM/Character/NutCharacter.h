@@ -88,6 +88,18 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Roll")
 	float RollDuration = 0.3f;
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Roll")
+	void OnRoll();
+
+	UPROPERTY(EditAnywhere, Category = "Roll")
+	float Energy;
+
+	UFUNCTION(BlueprintCallable)
+	bool CheckEnergy(float nrg);
+
+	UFUNCTION(BlueprintCallable)
+	void SetEnergy(float nrg);
+
 	// Variables internas para el movimiento progresivo
 	FVector DashDirection;
 	float DistanceTraveled;
@@ -102,6 +114,13 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool IsRolling;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bRollOnCooldown = false;
+
+	FTimerHandle RollCooldownHandle;
+
+	void ResetRollCooldown();
 
 	UPROPERTY(BlueprintReadWrite)
 	bool IsStuned = false;

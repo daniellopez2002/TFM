@@ -52,6 +52,9 @@ protected:
 
 	float ChargeTimer = 0.0f;
 
+	UPROPERTY(EditAnywhere)
+	bool Tutorial = false;
+
 	// ---- Attack ----
 	UPROPERTY(EditAnywhere)
 	float DashDistance = 600.0f;

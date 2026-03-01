@@ -74,7 +74,7 @@ void ATFMEnemyBolt::Tick(float DeltaTime)
         }
     }
 
-	UpdateColor(FLinearColor::Yellow);
+
 
 }
 
@@ -89,9 +89,24 @@ void ATFMEnemyBolt::Patrol(float DeltaTime)
 	float Distance =
 		FVector::Dist(GetActorLocation(), PlayerPawn->GetActorLocation());
 
-	if (Distance < DetectionRadius)
+	if (Distance < DetectionRadius && Tutorial == false)
 	{
 		ChangeState(EEnemyState::Charge);
+	}
+	else if (Tutorial == true) {
+		DrawDebugSphere(
+			GetWorld(),
+			GetActorLocation(),
+			DetectionRadius,      // radio
+			32,               // segmentos (suavidad)
+			FColor::Yellow,
+			false,            // persistente
+			-1.f,             // duración (-1 = solo un frame)
+			0,
+			2.f               // grosor línea
+		);
+		UpdateColor(FLinearColor::Red);
+		RotateTowards(PlayerPawn->GetActorLocation(), DeltaTime);
 	}
 }
 
@@ -134,12 +149,20 @@ void ATFMEnemyBolt::Attack(float DeltaTime)
 		UpdateColor(FLinearColor::Blue);
 
 		FHitResult Hit;
-		SetActorLocation(
-			GetActorLocation() +
-			DashDirection * (DashDistance / DashDuration) * DeltaTime,
-			true,   
-			&Hit
-		);
+
+		FVector MoveAmount =
+			DashDirection * (DashDistance / DashDuration) * DeltaTime;
+
+		AddActorWorldOffset(MoveAmount, true, &Hit);
+
+		if (Hit.bBlockingHit)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Dash bloqueado por %s"), *Hit.GetActor()->GetName());
+
+			DashTimer = 0.f;
+			ChangeState(EEnemyState::Charge);
+			return;
+		}
 
 	}
 	else
