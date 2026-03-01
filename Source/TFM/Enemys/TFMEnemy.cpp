@@ -3,6 +3,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/AudioComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/CapsuleComponent.h"
 
 ATFMEnemy::ATFMEnemy()
 {
@@ -36,10 +37,13 @@ void ATFMEnemy::Tick(float DeltaTime)
 
 	if (bIsKnockedBack)
 	{
-		AddActorWorldOffset(
-			KnockbackVelocity * DeltaTime,
-			true 
-		);
+		FHitResult Hit;
+		AddActorWorldOffset(KnockbackVelocity * DeltaTime, true, &Hit);
+
+		if (Hit.bBlockingHit)
+		{
+			KnockbackVelocity = FVector::ZeroVector;
+		}
 
 		KnockbackVelocity = FMath::VInterpTo(
 			KnockbackVelocity,
@@ -110,14 +114,9 @@ void ATFMEnemy::Patrol(float DeltaTime)
 	if (PatrolPoints.Num() == 0) return;
 
 	FVector CurrentLocation = GetActorLocation();
+	float Distance = FVector::Dist(CurrentLocation, CurrentTarget);
 
-	FVector Direction = (CurrentTarget - CurrentLocation).GetSafeNormal();
-
-	SetActorLocation(CurrentLocation + Direction * PatrolSpeed * DeltaTime);
-
-	RotateTowards(CurrentTarget, DeltaTime);
-
-	if (FVector::Dist(CurrentLocation, CurrentTarget) < 50.f)
+	if (Distance < 50.f)
 	{
 		WaitTime += DeltaTime;
 
@@ -127,7 +126,12 @@ void ATFMEnemy::Patrol(float DeltaTime)
 			CurrentTarget = PatrolPoints[CurrentPatrolIndex]->GetActorLocation();
 			WaitTime = 0.f;
 		}
+
+		return; 
 	}
+	FVector Direction = (CurrentTarget - CurrentLocation).GetSafeNormal();
+	AddActorWorldOffset(Direction * PatrolSpeed * DeltaTime, true);
+	RotateTowards(CurrentTarget, DeltaTime);
 }
 
 
